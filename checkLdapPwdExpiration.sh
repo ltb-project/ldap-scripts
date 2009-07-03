@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #====================================================================
-# Script for OpenLDAP 2.3.x with slapo-ppolicies actived
+# Script for OpenLDAP with ppolicy overlay
 #
 # Does searches on LDAP directory to determine which user passwords
 # came to expiration. If so, sends mails to concerned users.
@@ -16,7 +16,7 @@
 #
 # Copyright (C) 2008 Clement OUDOT
 # Copyright (C) 2007 Thomas CHEMINEAU
-# Copyright (C) 2007 LINAGORA
+# Copyright (C) 2009 LTB-project.org
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -30,8 +30,6 @@
 #
 # GPL License: http://www.gnu.org/licenses/gpl.txt
 #
-#====================================================================
-# More contributions on http://www.linagora.org
 #====================================================================
 
 #====================================================================
@@ -122,16 +120,13 @@ MY_LDAP_MAIL_ATTR=mail
 #   %login : user login
 #
 MY_MAIL_BODY="From: support@example.com\n\n \
-	Bonjour %name,\n\n \
-	Votre compte LDAP %login sur l'annuaire \
-	d'authentification arrive bientot a expiration. Veuillez \
-	renouveller votre mot de passe des que possible.\n\n \
-	Cordialement,\n\nLa Direction Technique."
+	Hi %name,\n\n \
+	please change your password.\n\nThe LDAP team."
 
 #
 # Mail subject
 #
-MY_MAIL_SUBJECT="[Rappel] Expiration de votre compte"
+MY_MAIL_SUBJECT="Your account will expire soon"
 
 #
 # Mail command binary
