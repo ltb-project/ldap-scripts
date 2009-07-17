@@ -29,10 +29,15 @@ my $csv_delimiter = ";";
 # Strip CSV headers (jump to second line)
 my $csv_strip_headers = 1;
 
+# Containers begin and end characters for replacement
+my $beginc = "{";
+my $endc = "}";
+
 # Mapping definition
 # First hash level is the task name
 # Sublevels use Net::LDAP::Entry hash representation
 # Each CSV field is noted {i} where i is the field number
+# and { } are containers delimiters ($beginc and $endc)
 my $map = {
     person => {
         dn => 'uid={0},ou=users,dc=example,dc=com',
@@ -94,10 +99,10 @@ while (<CSV>) {
             # Manage arrays
             if ( ref($v) eq "ARRAY") {
                 my @values = @$v;
-                foreach ( @values ) { $_ =~ s/{(\d)}/$columns[$1]/g; };
+                foreach ( @values ) { $_ =~ s/$beginc(\d)$endc/$columns[$1]/g; };
                 $v = \@values;
             } else {
-                $v =~ s/{(\d)}/$columns[$1]/g;
+                $v =~ s/$beginc(\d)$endc/$columns[$1]/g;
             }
             $localmap{$k} = $v;
         }
