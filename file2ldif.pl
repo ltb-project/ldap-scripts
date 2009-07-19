@@ -249,14 +249,8 @@ sub fmail {
     $value =~ s/(\s+)/-/g;
 
     # Remove accents
-    $value =~ s/[éèêë]/e/g;
-    # TODO: Bug with 'e'
-    $value =~ s/ee/e/g;
-    $value =~ s/[àâä]/a/g;
-    $value =~ s/[öô]/o/g;
-    $value =~ s/[ùûü]/u/g;
-    $value =~ s/[ïî]/i/g;
-    $value =~ s/[ç]/c/g;
+    use Text::Unaccent;
+    $value = unac_string('UTF-8', $value);
 
     return $value;
 }
