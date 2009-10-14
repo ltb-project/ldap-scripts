@@ -203,7 +203,7 @@ sub replace_value {
     if ( $key =~ m/\((.*)\)(.*)/ ) {
         $sub = $1;
         $attr = $2;
-    } else { $attr = $key }	
+    } else { $attr = $key }
 
     # Replace DN
     if ($attr eq "dn") { $value = $entry->dn(); }
@@ -212,7 +212,7 @@ sub replace_value {
     else { $value = $entry->get_value($attr); }
 
     # Return fake value to avoid errors
-    return $attr unless $value;
+    return $attr unless defined $value;
 
     # Trim begin and end whitespaces
     $value =~ s/^\s+|\s+$//g;
@@ -249,10 +249,12 @@ sub fmail {
     $value =~ s/(\s+)/-/g;
 
     # Remove accents
-    use Text::Unaccent;
-    $value = unac_string('UTF-8', $value);
-
-    return $value;
+    eval { require Text::Unaccent };
+    if ($@) { return $value; }
+    else {
+	$value = unac_string('UTF-8', $value);
+    	return $value;
+    }
 }
 
 #====================================================================
