@@ -178,6 +178,11 @@ while( not $inldif->eof() ) {
         delete $localmap{change_op};
 	$change_op = "add" unless $change_op;
 
+	# Remove empty values
+	while (my ($key, $value) = each(%localmap)) {
+	delete $localmap{$key} if ( $value eq "");
+	}
+	
 	# Write entry
         my $outentry = Net::LDAP::Entry->new($dn);
 	$outentry->changetype($changetype);
@@ -211,8 +216,8 @@ sub replace_value {
     # Get first attribute value
     else { $value = $entry->get_value($attr); }
 
-    # Return fake value to avoid errors
-    return $attr unless defined $value;
+    # Empty value
+    return "" unless defined $value;
 
     # Trim begin and end whitespaces
     $value =~ s/^\s+|\s+$//g;
