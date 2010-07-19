@@ -162,6 +162,7 @@ else {
 # Parse LDIF
 while ( not $inldif->eof() ) {
     my $entry = $inldif->read_entry();
+    next unless $entry;
     if ( $inldif->error() ) {
         print STDERR "Error msg: ",    $inldif->error(),       "\n";
         print STDERR "Error lines:\n", $inldif->error_lines(), "\n";
