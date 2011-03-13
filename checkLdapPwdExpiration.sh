@@ -35,6 +35,10 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 0.3 (03/2010):
+# - #295 fixed:
+#   Add a parameter to specify the search scope
+#   Get compatibility with cut behaviour on SUSE system
 # Version 0.2 (08/2008):
 # - Use zulu time (GMT) for currentTime
 # - Split mail command parameters (binary and subject)
@@ -92,6 +96,11 @@ MY_LDAP_SEARCHBASE="ou=People,dc=example,dc=com"
 # LDAP search filter to use to get all users
 #
 MY_LDAP_SEARCHFILTER="(&(uid=*)(objectClass=inetOrgPerson))"
+
+#
+# LDAP search scope to use to get all users
+#
+MY_LDAP_SEARCHSCOPE="one"
 
 #
 # Path to LDAP search binary
@@ -205,8 +214,9 @@ if [ ${MY_LDAP_ROOTDN} ]; then
 fi
 
 ## Performs global search
-${MY_LDAP_SEARCHBIN} ${ldap_param} -s one -b "${MY_LDAP_SEARCHBASE}" \
-	"${MY_LDAP_SEARCHFILTER}" "dn" > ${result_file}
+${MY_LDAP_SEARCHBIN} ${ldap_param} -s ${MY_LDAP_SEARCHSCOPE} \
+	-b "${MY_LDAP_SEARCHBASE}" "${MY_LDAP_SEARCHFILTER}" \
+	"dn" > ${result_file}
 
 ## Loops on results
 while read dnStr
