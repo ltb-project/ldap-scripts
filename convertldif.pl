@@ -51,6 +51,21 @@ my $branch_exclude = [
       )
 ];
 
+# LDIF Options
+
+# Sort attributes
+my $ldif_sort = 0;
+
+# DN encoding
+# none, base64 or canonical
+my $ldif_encode = "base64";
+
+# Convert attribute names in lowercase
+my $ldif_lowercase = 0;
+
+# Columns wrapping
+my $ldif_wrap = 78;
+
 #====================================================================
 # Modules
 #====================================================================
@@ -72,8 +87,13 @@ unless ($file) {
 my $inldif = Net::LDAP::LDIF->new($file);
 
 # Output file
-my $outldif =
-  Net::LDAP::LDIF->new( "$file.convert", "w", encode => 'base64', sort => 1 );
+my $outldif = Net::LDAP::LDIF->new(
+    "$file.convert", "w",
+    sort      => $ldif_sort,
+    encode    => $ldif_encode,
+    lowercase => $ldif_lowercase,
+    wrap      => $ldif_wrap,
+);
 
 # Parse LDIF
 while ( not $inldif->eof() ) {
