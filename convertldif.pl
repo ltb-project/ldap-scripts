@@ -138,21 +138,25 @@ while ( not $inldif->eof() ) {
 
             if ( $attr =~ /^$key_val_exclude$/i ) {
                 my $val        = $val_exclude->{$key_val_exclude};
-                my $values     = $entry->get_value( $attr, asref => 1 );
+                my $old_values = $entry->get_value( $attr, asref => 1 );
                 my $new_values = [];
-                foreach my $value (@$values) {
-                    unless ( grep( /^$value$/i, @$val ) ) {
-                        push @$new_values, $value;
+
+                foreach my $old_value (@$old_values) {
+                    unless ( grep( /^$old_value$/i, @$val ) ) {
+                        push @$new_values, $old_value;
                     }
                     else {
                         print STDERR
-                          "Entry $dn: value $_ for attribute $attr excluded\n";
+"Entry $dn: value $old_value for attribute $attr excluded\n";
                     }
                 }
+
                 $new_entry->add( $attr => $new_values );
-                next;
             }
+
         }
+
+        next if $new_entry->exists($attr);
 
         # Test 4: mapped attribute
         foreach my $key_map ( keys %$map ) {
