@@ -34,7 +34,8 @@ my $attr_exclude = [
 ];
 
 # Values to exclude
-my $val_exclude = { 'objectClass' => [qw(exampleObjectClass)], };
+my $val_exclude =
+  { 'objectClass' => [qw(exampleObjectClass otherObjectClass)], };
 
 # Attributes to map
 my $map = {
@@ -71,7 +72,8 @@ unless ($file) {
 my $inldif = Net::LDAP::LDIF->new($file);
 
 # Output file
-my $outldif = Net::LDAP::LDIF->new( "$file.convert", "w" , encode => 'base64', sort => 1);
+my $outldif =
+  Net::LDAP::LDIF->new( "$file.convert", "w", encode => 'base64', sort => 1 );
 
 # Parse LDIF
 while ( not $inldif->eof() ) {
@@ -112,32 +114,37 @@ while ( not $inldif->eof() ) {
         }
 
         # Test 3: excluded value
-        if ( defined $val_exclude->{$attr} ) {
-            my $val        = $val_exclude->{$attr};
-            my $values     = $entry->get_value( $attr, asref => 1 );
-            my $new_values = [];
-            foreach my $value (@$values) {
-                unless ( grep( /^$value$/i, @$val ) ) {
-                    push @$new_values, $value;
+        foreach my $key_val_exclude ( keys %$val_exclude ) {
+
+            if ( $attr =~ /^$key_val_exclude$/i ) {
+                my $val        = $val_exclude->{$key_val_exclude};
+                my $values     = $entry->get_value( $attr, asref => 1 );
+                my $new_values = [];
+                foreach my $value (@$values) {
+                    unless ( grep( /^$value$/i, @$val ) ) {
+                        push @$new_values, $value;
+                    }
+                    else {
+                        print STDERR
+                          "Entry $dn: value $_ for attribute $attr excluded\n";
+                    }
                 }
-                else {
-                    print STDERR
-                      "Entry $dn: value $_ for attribute $attr excluded\n";
-                }
+                $new_entry->add( $attr => $new_values );
+                next;
             }
-            $new_entry->add( $attr => $new_values );
-            next;
         }
 
         # Test 4: mapped attribute
-        if ( defined $map->{$attr} ) {
-            my $mapped_attr = $map->{$attr};
+        foreach my $key_map ( keys %$map ) {
+            if ( $attr =~ /^$key_map$/i ) {
+                my $mapped_attr = $map->{$key_map};
 
-            print STDERR
-              "Entry $dn: Use $mapped_attr value for attribute $attr\n";
-            $new_entry->add(
-                $attr => $entry->get_value( $mapped_attr, asref => 1 ) );
-            next;
+                print STDERR
+                  "Entry $dn: Use $mapped_attr value for attribute $attr\n";
+                $new_entry->add(
+                    $attr => $entry->get_value( $mapped_attr, asref => 1 ) );
+                next;
+            }
         }
 
         # Here, we just keep the attribute
