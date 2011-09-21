@@ -127,6 +127,8 @@ while ( not $inldif->eof() ) {
 
     foreach my $attr ( $entry->attributes ) {
 
+        my $exclude_attr = 0;
+
         # Test 2: excluded attribute
         if ( grep ( /^$attr$/i, @$attr_exclude ) ) {
             print STDERR "Entry $dn: attribute $attr excluded\n";
@@ -152,24 +154,32 @@ while ( not $inldif->eof() ) {
                 }
 
                 $new_entry->add( $attr => $new_values );
+                $exclude_attr = 1;
             }
 
         }
 
-        next if $new_entry->exists($attr);
+        next if $exclude_attr;
 
         # Test 4: mapped attribute
         foreach my $key_map ( keys %$map ) {
             if ( $attr =~ /^$key_map$/i ) {
                 my $mapped_attr = $map->{$key_map};
 
-                print STDERR
-                  "Entry $dn: Use $mapped_attr value for attribute $attr\n";
-                $new_entry->add(
-                    $attr => $entry->get_value( $mapped_attr, asref => 1 ) );
-                next;
+                if ( $entry->exists($mapped_attr) ) {
+
+                    print STDERR
+                      "Entry $dn: Use $mapped_attr value for attribute $attr\n";
+                    $new_entry->add(
+                        $attr => $entry->get_value( $mapped_attr, asref => 1 )
+                    );
+                }
+                $exclude_attr = 1;
+
             }
         }
+
+        next if $exclude_attr;
 
         # Here, we just keep the attribute
         $new_entry->add( $attr => $entry->get_value( $attr, asref => 1 ) );
