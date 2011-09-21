@@ -55,6 +55,7 @@ my $branch_exclude = [
 #====================================================================
 use Net::LDAP::LDIF;
 use strict;
+use utf8;
 
 #====================================================================
 # Get command line arguments
@@ -70,7 +71,7 @@ unless ($file) {
 my $inldif = Net::LDAP::LDIF->new($file);
 
 # Output file
-my $outldif = Net::LDAP::LDIF->new( "$file.convert", "w" );
+my $outldif = Net::LDAP::LDIF->new( "$file.convert", "w" , encode => 'base64', sort => 1);
 
 # Parse LDIF
 while ( not $inldif->eof() ) {
