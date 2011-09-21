@@ -186,6 +186,19 @@ while ( not $inldif->eof() ) {
 
     }
 
+    # Map attributes that do not exists in entry
+    foreach my $key_map ( keys %$map ) {
+        my $mapped_attr = $map->{$key_map};
+        if ( !$new_entry->exists($key_map) and $entry->exists($mapped_attr) ) {
+
+            print STDERR
+              "Entry $dn: Use $mapped_attr value for attribute $key_map\n";
+            $new_entry->add(
+                $key_map => $entry->get_value( $mapped_attr, asref => 1 ) );
+
+        }
+    }
+
     # Print new entry in LDIF
     $outldif->write_entry($new_entry);
 }
