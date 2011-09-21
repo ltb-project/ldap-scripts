@@ -118,7 +118,7 @@ while ( not $inldif->eof() ) {
             my $new_values = [];
             foreach my $value (@$values) {
                 unless ( grep( /^$value$/i, @$val ) ) {
-                    push @$new_values, $_;
+                    push @$new_values, $value;
                 }
                 else {
                     print STDERR
