@@ -34,7 +34,7 @@ my $attr_exclude = [
 ];
 
 # Values to exclude
-my $val_exclude = { 'objectClass' => 'exampleObjectClass', };
+my $val_exclude = { 'objectClass' => [qw(exampleObjectClass)], };
 
 # Attributes to map
 my $map = {
@@ -115,8 +115,8 @@ while ( not $inldif->eof() ) {
             my $val        = $val_exclude->{$attr};
             my $values     = $entry->get_value( $attr, asref => 1 );
             my $new_values = [];
-            foreach (@$values) {
-                unless ( $_ =~ /^$val$/i ) {
+            foreach my $value (@$values) {
+                unless ( grep( /^$value$/i, @$val ) ) {
                     push @$new_values, $_;
                 }
                 else {
