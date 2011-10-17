@@ -37,6 +37,10 @@ my $attr_exclude = [
 my $val_exclude =
   { 'objectClass' => [qw(exampleObjectClass otherObjectClass)], };
 
+# Values to map
+my $val_map =
+  { 'creatorsName' => { 'cn=dirman' => 'cn=manager,dc=example,dc=com' }, };
+
 # Attributes to map
 my $map = {
     'c'  => 'co',
@@ -135,7 +139,29 @@ while ( not $inldif->eof() ) {
             next;
         }
 
-        # Test 3: excluded value
+        # Test 3: mapped values
+        foreach my $key_val_map ( keys %$val_map ) {
+
+            if ( $attr =~ /^$key_val_map$/i ) {
+                foreach
+                  my $key_val_map_attr ( keys %{ $val_map->{$key_val_map} } )
+                {
+                    if (
+                        grep /^$key_val_map_attr$/i,
+                        $entry->get_value($key_val_map)
+                      )
+                    {
+                        print STDERR
+"Entry $dn: Value substitution for attribute $key_val_map\n";
+                        $entry->delete( $key_val_map => [$key_val_map_attr] );
+                        $entry->add( $key_val_map =>
+                              $val_map->{$attr}->{$key_val_map_attr} );
+                    }
+                }
+            }
+        }
+
+        # Test 4: excluded value
         foreach my $key_val_exclude ( keys %$val_exclude ) {
 
             if ( $attr =~ /^$key_val_exclude$/i ) {
@@ -161,7 +187,7 @@ while ( not $inldif->eof() ) {
 
         next if $exclude_attr;
 
-        # Test 4: mapped attribute
+        # Test 5: mapped attribute
         foreach my $key_map ( keys %$map ) {
             if ( $attr =~ /^$key_map$/i ) {
                 my $mapped_attr = $map->{$key_map};
