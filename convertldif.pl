@@ -155,7 +155,7 @@ while ( not $inldif->eof() ) {
 "Entry $dn: Value substitution for attribute $key_val_map\n";
                         $entry->delete( $key_val_map => [$key_val_map_attr] );
                         $entry->add( $key_val_map =>
-                              $val_map->{$attr}->{$key_val_map_attr} );
+                              $val_map->{$key_val_map}->{$key_val_map_attr} );
                     }
                 }
             }
