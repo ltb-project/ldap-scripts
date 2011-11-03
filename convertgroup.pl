@@ -171,8 +171,9 @@ foreach my $newGroup (@$groups) {
 
     # Build new group
     my $newGroupDN = $dstGroupATName . "=" . $newGroup . "," . $dstGroupBranch;
-    my $newGroupEntry =
-      Net::LDAP::Entry->new( $newGroupDN, 'objectClass' => $dstGroupOC, );
+    my $newGroupEntry = Net::LDAP::Entry->new();
+    $newGroupEntry->dn($newGroupDN);
+    $newGroupEntry->add( 'objectClass' => $dstGroupOC );
 
     # Find members
     if ( exists $groupMembership->{$newGroup} ) {
