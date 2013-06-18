@@ -33,6 +33,9 @@ my $change = 1;
 # CSV delimiter (default is ",")
 my $csv_delimiter = ";";
 
+# CSV multi values delimiter
+my $csv_multivalues_delimiter = ",";
+
 # Strip CSV headers (jump to second line)
 my $csv_strip_headers = 1;
 
@@ -136,7 +139,9 @@ if ( $type =~ m/csv/i ) {
             # Write every column as attribute
             my $entry = Net::LDAP::Entry->new('o=fakedn');
             for my $i ( 0 .. $#columns ) {
-                $entry->add( $i => $columns[$i] );
+                my @values =
+                  split( /$csv_multivalues_delimiter/, $columns[$i] );
+                $entry->add( $i => \@values );
             }
             $inldif->write_entry($entry);
         }
@@ -175,20 +180,21 @@ while ( not $inldif->eof() ) {
         while ( my ( $k, $v ) = each %localmap ) {
             if ( ref($v) eq "ARRAY" ) {
                 my @values = @$v;
+                my @all_values;
                 foreach (@values) {
-                    $_ =~
-                      s/$beginc([^$endc]*)?$endc/&replace_value($entry,$1)/ge;
+                    my $new_values = &generate_value( $entry, $_ );
+                    push @all_values, @$new_values if $new_values;
                 }
-                $v = \@values;
+                $v = \@all_values;
             }
             else {
-                $v =~ s/$beginc([^$endc]*)?$endc/&replace_value($entry,$1)/ge;
+                $v = &generate_value( $entry, $v );
             }
             $localmap{$k} = $v;
         }
 
         # DN
-        my $dn = $localmap{dn};
+        my $dn = shift @{ $localmap{'dn'} };
         delete $localmap{dn};
 
         # Change operation
@@ -212,9 +218,10 @@ while ( not $inldif->eof() ) {
     }
 }
 
-# Takes the first value of wanted attribute
+# Takes all values of wanted attribute
 # Removes the whitespaces from begin and end
 # Apply subroutine if any
+# @return ARRAYREF of values
 sub replace_value {
     my $entry = shift;
     my $key   = shift;
@@ -230,21 +237,50 @@ sub replace_value {
     else { $attr = $key }
 
     # Replace DN
-    if ( $attr eq "dn" ) { $value = $entry->dn(); }
+    if ( $attr eq "dn" ) { $value = [ $entry->dn() ]; }
 
-    # Get first attribute value
-    else { $value = $entry->get_value($attr); }
+    # Get all attribute values
+    else { $value = $entry->get_value( $attr, asref => 1 ); }
 
     # Empty value
     return "" unless defined $value;
 
-    # Trim begin and end whitespaces
-    $value =~ s/^\s+|\s+$//g;
+    foreach my $val (@$value) {
 
-    # Apply subroutine if any
-    $value = &apply_sub( $value, $sub ) if ($sub);
+        # Trim begin and end whitespaces
+        $val =~ s/^\s+|\s+$//g;
+
+        # Apply subroutine if any
+        $val = &apply_sub( $val, $sub ) if ($sub);
+    }
 
     return $value;
+}
+
+# Create the new values
+# Call replace_value to get the mapping
+# @return ARRAYREF of new values
+sub generate_value {
+    my $entry = shift;
+    my $value = shift;
+    my $key;
+    my @result;
+
+    if ( ($key) = ( $value =~ m/$beginc([^$endc]*)?$endc/ ) ) {
+        my $new_values = &replace_value( $entry, $key );
+        if ($new_values) {
+            foreach my $new_value (@$new_values) {
+                my $safe_value = $value;
+                $safe_value =~ s/$beginc([^$endc]*)?$endc/$new_value/ge;
+                push @result, $safe_value;
+            }
+        }
+    }
+    else {
+        push @result, $value;
+    }
+
+    return \@result;
 }
 
 # Apply subroutine
