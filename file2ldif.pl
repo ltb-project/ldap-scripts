@@ -228,6 +228,7 @@ sub replace_value {
     my $sub;
     my $attr;
     my $value;
+    my @result;
 
     # Check subroutine presence
     if ( $key =~ m/\((.*)\)(.*)/ ) {
@@ -247,14 +248,18 @@ sub replace_value {
 
     foreach my $val (@$value) {
 
+        my $safe_val = $val;
+
         # Trim begin and end whitespaces
-        $val =~ s/^\s+|\s+$//g;
+        $safe_val =~ s/^\s+|\s+$//g;
 
         # Apply subroutine if any
-        $val = &apply_sub( $val, $sub ) if ($sub);
+        $safe_val = &apply_sub( $val, $sub ) if ($sub);
+
+        push @result, $safe_val;
     }
 
-    return $value;
+    return \@result;
 }
 
 # Create the new values
