@@ -243,7 +243,7 @@ do
 	mail=`grep -w "${MY_LDAP_MAIL_ATTR}:" ${buffer_file} | cut -d : -f 2 \
 		| sed "s/^ *//;s/ *$//"`
 	pwdChangedTime=`grep -w "pwdChangedTime:" ${buffer_file} \
-		| cut -d : -f 2 | cut -c 0-15 | sed "s/^ *//;s/ *$//"`
+		| cut -d : -f 2 | cut -c 1-15 | sed "s/^ *//;s/ *$//"`
 	pwdPolicySubentry=`grep -w "pwdPolicySubentry:" ${buffer_file} \
 		| cut -d : -f 2 | sed "s/^ *//;s/ *$//"`
 
@@ -283,7 +283,7 @@ do
 		h=`echo ${pwdChangedTime} | cut -c 9-10`
 		d=`echo ${pwdChangedTime} | cut -c 7-8`
 		M=`echo ${pwdChangedTime} | cut -c 5-6`
-		y=`echo ${pwdChangedTime} | cut -c 0-4`
+		y=`echo ${pwdChangedTime} | cut -c 1-4`
 		currentTime=`getTimeInSeconds`
 		pwdChangedTime=`getTimeInSeconds "$y $M $d $h $m $s"`
 		diffTime=`expr ${currentTime} - ${pwdChangedTime}`
