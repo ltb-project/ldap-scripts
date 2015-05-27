@@ -66,19 +66,19 @@ my $map = {
         uniqueMember => 'cn=empty',
     },
     c_person => {
-        dn => 'uid={0},ou=users,dc=example,dc=com',
+        dn => 'uid={1},ou=users,dc=example,dc=com',
         objectClass =>
           [ 'top', 'person', 'organizationalPerson', 'inetOrgPerson' ],
-        uid       => '{0}',
-        givenName => '{1}',
-        sn        => '{2}',
-        cn        => '{1} {2}',
+        uid       => '{1}',
+        givenName => '{2}',
+        sn        => '{3}',
+        cn        => '{2} {3}',
     },
     c_group => {
-        dn           => 'cn={0},ou=groups,dc=example,dc=com',
+        dn           => 'cn={1},ou=groups,dc=example,dc=com',
         objectClass  => [ 'top', 'groupOfUniqueNames' ],
-        cn           => '{0}',
-        uniqueMember => 'uid={1},ou=users,dc=example,dc=com',
+        cn           => '{1}',
+        uniqueMember => 'uid={2},ou=users,dc=example,dc=com',
     },
 };
 
@@ -141,7 +141,7 @@ if ( $type =~ m/csv/i ) {
             for my $i ( 0 .. $#columns ) {
                 my @values =
                   split( /\Q$csv_multivalues_delimiter\E/, $columns[$i] );
-                $entry->add( $i => \@values );
+                $entry->add( $i + 1 => \@values );
             }
             $inldif->write_entry($entry);
         }
