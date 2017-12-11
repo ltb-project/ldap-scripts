@@ -328,10 +328,11 @@ my $dateregexp_full;
 my $dateregexp_split;
 
 if ($dateformat) {
-   $dateregexp_full = '(\d+-\d+-\d+T\d+:\d+:\d+\.\d+\+\d+:\d+)';
-   $dateregexp_split = '\d+-(\d+)-(\d+)T(\d+):(\d+):(\d+)\.\d+\+\d+:\d+';
-} else {
-    $dateregexp_full = '(\w+\s+\d+\s+\d+:\d+:\d+)';
+    $dateregexp_full  = '(\d+-\d+-\d+T\d+:\d+:\d+\.\d+\+\d+:\d+)';
+    $dateregexp_split = '\d+-(\d+)-(\d+)T(\d+):(\d+):(\d+)\.\d+\+\d+:\d+';
+}
+else {
+    $dateregexp_full  = '(\w+\s+\d+\s+\d+:\d+:\d+)';
     $dateregexp_split = '(\w+)\s+(\d+)\s+(\d+):(\d+):(\d+)';
 }
 
@@ -586,7 +587,7 @@ for my $file (@ARGV) {
             ### Check for SEARCHES
         }
         elsif ( $line =~
-/^$dateregexp_split.*conn=(\d+) [ ] op=\d+ [ ] SEARCH [ ] RESULT/mx
+            /^$dateregexp_split.*conn=(\d+) [ ] op=\d+ [ ] SEARCH [ ] RESULT/mx
           )
         {
             my $month = $1;
@@ -607,9 +608,8 @@ for my $file (@ARGV) {
 
             ### Check for unbinds
         }
-        elsif ( $line =~
-            /^$dateregexp_split.*conn=(\d+) [ ] op=\d+ [ ] UNBIND/mx
-          )
+        elsif (
+            $line =~ /^$dateregexp_split.*conn=(\d+) [ ] op=\d+ [ ] UNBIND/mx )
         {
             my $month = $1;
             my $day   = $2;
@@ -713,8 +713,12 @@ for my $logfile ( sort keys %logarray ) {
 #######################################
 
 my $total_operations =
-  $stats{TOTAL_BIND} + $stats{TOTAL_UNBIND} + $stats{TOTAL_SRCH} +
-  $stats{TOTAL_MOD} + $stats{TOTAL_ADD} + $stats{TOTAL_MODRDN} +
+  $stats{TOTAL_BIND} +
+  $stats{TOTAL_UNBIND} +
+  $stats{TOTAL_SRCH} +
+  $stats{TOTAL_MOD} +
+  $stats{TOTAL_ADD} +
+  $stats{TOTAL_MODRDN} +
   $stats{TOTAL_DEL};
 
 print "\n\n" . "Operation totals\n" . "----------------\n";
@@ -750,7 +754,7 @@ for my $selected (@operations) {
         MOD      => sub { $operations{MOD}{DATA}      = 1 },
         MODRDN   => sub { $operations{MODRDN}{DATA}   = 1 },
         DEL      => sub { $operations{DEL}{DATA}      = 1 },
-        ALL => sub {
+        ALL      => sub {
             $operations{CONNECT}{DATA}  = 1;
             $operations{FAILURES}{DATA} = 1;
             $operations{BIND}{DATA}     = 1;
@@ -1050,12 +1054,13 @@ print "$printstr\n";
 
 my $month_table;
 if ($dateformat) {
-	$month_table = [ qw(01 02 03 04 05 06 07 08 09 10 11 12) ];
-} else {
-	$month_table = [ qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec) ];
+    $month_table = [qw(01 02 03 04 05 06 07 08 09 10 11 12)];
+}
+else {
+    $month_table = [qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)];
 }
 
-for my $index ( @$month_table ) {
+for my $index (@$month_table) {
     if ( defined $months{$index} || $printmonths ) {
         printf '  %-11s', $index;
         if ( $operations{CONNECT}{DATA} ) {
