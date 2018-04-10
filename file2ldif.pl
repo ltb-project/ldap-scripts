@@ -271,13 +271,33 @@ sub generate_value {
     my $key;
     my @result;
 
-    if ( ($key) = ( $value =~ m/$beginc([^$endc]*)?$endc/ ) ) {
-        my $new_values = &replace_value( $entry, $key );
-        if ($new_values) {
-            foreach my $new_value (@$new_values) {
-                my $safe_value = $value;
-                $safe_value =~ s/$beginc([^$endc]*)?$endc/$new_value/ge;
-                push @result, $safe_value;
+    if ( $value =~ m/$beginc([^$endc]*)?$endc/ ) {
+        my @keys = ( $value =~ m/$beginc([^$endc]*)?$endc/g );
+
+        # If multiple keys, use only first attribute value
+        if ( $#keys > 0 ) {
+            my $hValues = {};
+            foreach $key (@keys) {
+                my $new_values = &replace_value( $entry, $key );
+                if ($new_values) {
+                    $hValues->{$key} = shift @$new_values;
+
+                }
+            }
+            my $safe_value = $value;
+            $safe_value =~ s/$beginc([^$endc]*)?$endc/$hValues->{$1}/ge;
+            push @result, $safe_value;
+        }
+        else {
+            # Else use all attributes values
+            $key = shift @keys;
+            my $new_values = &replace_value( $entry, $key );
+            if ($new_values) {
+                foreach my $new_value (@$new_values) {
+                    my $safe_value = $value;
+                    $safe_value =~ s/$beginc([^$endc]*)?$endc/$new_value/ge;
+                    push @result, $safe_value;
+                }
             }
         }
     }
