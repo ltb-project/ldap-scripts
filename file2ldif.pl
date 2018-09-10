@@ -198,7 +198,7 @@ while ( not $inldif->eof() ) {
         delete $localmap{dn};
 
         # Change operation
-        my $change_op = $localmap{change_op};
+        my $change_op = shift @{ $localmap{change_op} };
         delete $localmap{change_op};
         $change_op = "add" unless $change_op;
 
