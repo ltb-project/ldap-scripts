@@ -70,6 +70,9 @@ my $ldif_lowercase = 0;
 # Columns wrapping
 my $ldif_wrap = 78;
 
+# Remove empty values
+my $remove_empty_values = 1;
+
 #====================================================================
 # Modules
 #====================================================================
@@ -161,6 +164,31 @@ while ( not $inldif->eof() ) {
             }
         }
 
+        # Exclude empty attribute
+        if ($remove_empty_values) {
+            my $old_values  = $entry->get_value( $attr, asref => 1 );
+            my $new_values  = [];
+            my $need_remove = 0;
+            foreach my $old_value (@$old_values) {
+                unless ( grep( /^\s*$/, $old_value ) ) {
+                    push @$new_values, $old_value;
+                }
+                else {
+                    print STDERR
+                      "Entry $dn: empty value for attribute $attr excluded\n";
+                    $need_remove = 1;
+                }
+            }
+            if ($need_remove) {
+                if ( defined $new_values->[0] ) {
+                    $entry->replace( $attr => $new_values );
+                }
+                else {
+                    $entry->delete( $attr => [] );
+                }
+            }
+        }
+
         # Test 4: excluded value
         foreach my $key_val_exclude ( keys %$val_exclude ) {
 
@@ -208,7 +236,8 @@ while ( not $inldif->eof() ) {
         next if $exclude_attr;
 
         # Here, we just keep the attribute
-        $new_entry->add( $attr => $entry->get_value( $attr, asref => 1 ) );
+        $new_entry->add( $attr => $entry->get_value( $attr, asref => 1 ) )
+          if defined $entry->get_value($attr);
 
     }
 
