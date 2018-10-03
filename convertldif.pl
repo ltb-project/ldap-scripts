@@ -73,6 +73,9 @@ my $ldif_wrap = 78;
 # Remove empty values
 my $remove_empty_values = 1;
 
+# Force UTF-8 conversion
+my $force_utf8_conversion = 1;
+
 #====================================================================
 # Modules
 #====================================================================
@@ -187,6 +190,32 @@ while ( not $inldif->eof() ) {
                     $entry->delete( $attr => [] );
                 }
             }
+        }
+
+        # Force UT8 encoding
+        if ($force_utf8_conversion) {
+            my $old_values = $entry->get_value( $attr, asref => 1 );
+            my $new_values = [];
+
+            require Encode;
+
+            foreach my $old_value (@$old_values) {
+                eval {
+                    my $safevalue = $old_value;
+                    Encode::from_to( $safevalue, "utf8", "iso-8859-1",
+                        Encode::FB_CROAK );
+                };
+                if ($@) {
+                    Encode::from_to( $old_value, "iso-8859-1",
+                        "utf8", Encode::FB_CROAK );
+                    print STDERR
+"Entry $dn: Force value utf8 conversion for attribute $attr\n";
+                }
+
+                push @$new_values, $old_value;
+            }
+
+            $entry->replace( $attr => $new_values );
         }
 
         # Test 4: excluded value
