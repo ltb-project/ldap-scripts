@@ -273,6 +273,12 @@ do
 	pwdExpireWarning=`${ldap_search} | grep -w "pwdExpireWarning:" | cut -d : -f 2 \
 		| sed "s/^ *//;s/ *$//"`
 
+        # Go to next user if no pwdMaxAge (no expiration)
+        if [ ! "${pwdMaxAge}" ]; then
+                echo echo "${MY_LOG_HEADER} No password expiration configured for ${login}" >&2
+                continue
+        fi
+
 	# Replace MAIL_DELAY by pwdExpireWarning if exists
 	MY_MAIL_DELAY=${MY_MAIL_DELAY:=$pwdExpireWarning}
 
