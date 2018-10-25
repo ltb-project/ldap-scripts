@@ -275,7 +275,7 @@ do
 
         # Go to next user if no pwdMaxAge (no expiration)
         if [ ! "${pwdMaxAge}" ]; then
-                echo echo "${MY_LOG_HEADER} No password expiration configured for ${login}" >&2
+                echo "${MY_LOG_HEADER} No password expiration configured for ${login}" >&2
                 continue
         fi
 
