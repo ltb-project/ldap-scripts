@@ -66,11 +66,7 @@
 # Configuration
 #====================================================================
 
-#
-# Locale
-# eg: export LC_ALL=en_US.UTF-8
-#
-export LC_ALL=en_US.UTF-8
+
 
 #
 # LDAP host URI
@@ -132,6 +128,12 @@ MY_LDAP_SEARCHBIN="/usr/local/openldap/bin/ldapsearch"
 MY_LDAP_NAME_ATTR=cn
 MY_LDAP_LOGIN_ATTR=uid
 MY_LDAP_MAIL_ATTR=mail
+
+#
+# Locale for date
+# eg: export LC_ALL=en_US.UTF-8
+#
+export LC_ALL=en_US.UTF-8
 
 #
 # Mail body message, with particular variables :
@@ -343,7 +345,7 @@ do
 			logmsg="${MY_MAIL_BODY}"
 			logmsg=`echo ${logmsg} | sed "s/%name/${name}/; \
 				s/%login/${login}/; s/%expireTimeTZ/${expireTimeTZ}/; s/%pwdMinLength/${pwdMinLength}/; s/%pwdInHistory/${pwdInHistory}/; \
-			        s/%expireDays/${expireDays}/	"`
+				s/%expireDays/${expireDays}/"`
 
 			# Sending mail...
 			echo "${logmsg}" | ${MY_MAIL_BIN} -s "${MY_MAIL_SUBJECT}" ${mail} >&2
