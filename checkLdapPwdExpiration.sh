@@ -17,6 +17,7 @@
 # Copyright (C) 2008 Clement OUDOT
 # Copyright (C) 2007 Thomas CHEMINEAU
 # Copyright (C) 2009 LTB-project.org
+# Copyright (C) 2019 Worteks
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License
@@ -35,6 +36,9 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 0.4 (11/2019)
+# - #11 fixed:
+#   Add remaning time before password expiration in mail.
 # Version 0.3 (03/2010):
 # - #295 fixed:
 #   Add a parameter to specify the search scope
@@ -61,6 +65,8 @@
 #====================================================================
 # Configuration
 #====================================================================
+
+
 
 #
 # LDAP host URI
@@ -105,7 +111,7 @@ MY_LDAP_SEARCHSCOPE="one"
 #
 # Path to LDAP search binary
 #
-MY_LDAP_SEARCHBIN="/opt/openldap/bin/ldapsearch"
+MY_LDAP_SEARCHBIN="/usr/local/openldap/bin/ldapsearch"
 
 #
 # Delay to begin sending adverts
@@ -124,13 +130,27 @@ MY_LDAP_LOGIN_ATTR=uid
 MY_LDAP_MAIL_ATTR=mail
 
 #
+# Locale for date
+# eg: export LC_ALL=en_US.UTF-8
+#
+export LC_ALL=en_US.UTF-8
+
+#
 # Mail body message, with particular variables :
 #   %name : user name
 #   %login : user login
 #
-MY_MAIL_BODY="From: support@example.com\n\n \
+MY_MAIL_BODY="From: noreply@example.com\n\n \
 	Hi %name,\n\n \
-	please change your password.\n\nThe LDAP team."
+	
+	Please change your password. It will expire in %expireDays days on %expireTimeTZ.\n\n \
+
+	As a reminder, the password policy is :\n\n \
+
+	- Minimum Password Length : %pwdMinLength characters\n\n \
+	- There is a password history, your new password must be different from you last %pwdInHistory passwords.\n\n \
+
+	The LDAP team."
 
 #
 # Mail subject
@@ -266,11 +286,15 @@ do
 	else
 		ldap_search="${ldap_search} -b ${MY_LDAP_DEFAULTPWDPOLICYDN}"
 	fi
-
-	ldap_search="$ldap_search pwdMaxAge pwdExpireWarning"
+	
+	ldap_search="$ldap_search pwdMaxAge pwdExpireWarning pwdMinLength pwdInHistory"
 	pwdMaxAge=`${ldap_search} | grep -w "pwdMaxAge:" | cut -d : -f 2 \
 		| sed "s/^ *//;s/ *$//"`
 	pwdExpireWarning=`${ldap_search} | grep -w "pwdExpireWarning:" | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//"`
+	pwdMinLength=`${ldap_search} | grep -w "pwdMinLength:" | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//"`
+	pwdInHistory=`${ldap_search} | grep -w "pwdInHistory:" | cut -d : -f 2 \
 		| sed "s/^ *//;s/ *$//"`
 
         # Go to next user if no pwdMaxAge (no expiration)
@@ -302,6 +326,14 @@ do
 		echo "${MY_LOG_HEADER} Password expired for ${login}" >&2
 		continue
 	fi
+	
+	expireTimeTZ=`date -d @$expireTime "+%A %d %B %Y %T"`
+	
+	expireTimeMail=`date -d @$expireTime "+%s"`
+
+	now=`date +%s`
+
+	expireDays=`echo $(( (${expireTimeMail} - ${now} )/(60*60*24) ))`
 
 	# ALL LDAP attributes should be there, else continue to next user
 	if [ "${mail}" -a "${name}" \
@@ -312,7 +344,8 @@ do
 		if [ ${diffTime} -gt ${pwdMaxAge} ]; then
 			logmsg="${MY_MAIL_BODY}"
 			logmsg=`echo ${logmsg} | sed "s/%name/${name}/; \
-				s/%login/${login}/"`
+				s/%login/${login}/; s/%expireTimeTZ/${expireTimeTZ}/; s/%pwdMinLength/${pwdMinLength}/; s/%pwdInHistory/${pwdInHistory}/; \
+				s/%expireDays/${expireDays}/"`
 
 			# Sending mail...
 			echo "${logmsg}" | ${MY_MAIL_BIN} -s "${MY_MAIL_SUBJECT}" ${mail} >&2
