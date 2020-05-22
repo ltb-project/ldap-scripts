@@ -205,7 +205,8 @@ while ( not $inldif->eof() ) {
         # Remove empty values
         while ( my ( $key, $value ) = each(%localmap) ) {
             delete $localmap{$key} if ( $value eq "" );
-            delete $localmap{$key} if ( ref($value) eq "ARRAY" and @$value == 0 );
+            delete $localmap{$key}
+              if ( ref($value) eq "ARRAY" and @$value == 0 );
         }
 
         # Write entry
