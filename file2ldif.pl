@@ -238,9 +238,14 @@ sub replace_value {
     my @result;
 
     # Check subroutine presence
-    if ( $key =~ m/\((.*)\)(.*)/ ) {
+    if ( $key =~ m/\((.*)\)(.*)?/ ) {
         $sub  = $1;
         $attr = $2;
+
+        # If no attribute, apply only subroutine and return value
+        unless ($attr) {
+            return [ &apply_sub( undef, $sub ) ];
+        }
     }
     else { $attr = $key }
 
