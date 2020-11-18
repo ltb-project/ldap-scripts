@@ -139,9 +139,14 @@ if ( $type =~ m/csv/i ) {
             # Write every column as attribute
             my $entry = Net::LDAP::Entry->new('o=fakedn');
             for my $i ( 0 .. $#columns ) {
-                my @values =
-                  split( /\Q$csv_multivalues_delimiter\E/, $columns[$i] );
-                $entry->add( $i + 1 => \@values );
+                if ($csv_multivalues_delimiter) {
+                    my @values =
+                      split( /\Q$csv_multivalues_delimiter\E/, $columns[$i] );
+                    $entry->add( $i + 1 => \@values );
+                }
+                else {
+                    $entry->add( $i + 1 => $columns[$i] );
+                }
             }
             $inldif->write_entry($entry);
         }
