@@ -45,10 +45,11 @@ my $map = {
         dn => 'uid={(lc)uid},ou=users,dc=example,dc=com',
         objectClass =>
           [ 'top', 'person', 'organizationalPerson', 'inetOrgPerson' ],
-        cn        => '{cn}',
-        sn        => '{(uc)sn}',
-        givenName => '{(ucfirstlc)givenname}',
-        mail      => '{(fmail)givenname}.{(fmail)sn}@example.com',
+        cn           => '{cn}',
+        sn           => '{(uc)sn}',
+        givenName    => '{(ucfirstlc)givenname}',
+        mail         => '{(fmail)givenname}.{(fmail)sn}@example.com',
+        userPassword => '{(random12)}',
     },
     l_group => {
         dn           => 'cn={employeetype},ou=groups,dc=example,dc=com',
@@ -332,6 +333,10 @@ sub apply_sub {
     $value = ucfirst( lc($value) ) if ( $sub eq "ucfirstlc" );
     $value = &fmail($value)        if ( $sub eq "fmail" );
 
+    if ( $sub =~ /^random(\d+)/ ) {
+        $value = &randomval($1);
+    }
+
     return $value;
 }
 
@@ -352,6 +357,21 @@ sub fmail {
         $value = unac_string( 'UTF-8', $value );
         return $value;
     }
+}
+
+# Generate random value
+sub randomval {
+    my $length = shift;
+    my $value;
+
+    eval { require String::Random };
+    if ($@) { return $value; }
+    else {
+        my $pass = String::Random->new;
+        $value = $pass->randregex("[A-Za-z0-9]{$length}");
+    }
+
+    return $value;
 }
 
 #====================================================================
