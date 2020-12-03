@@ -236,7 +236,7 @@ fi
 ## Performs global search
 ${MY_LDAP_SEARCHBIN} ${ldap_param} -s ${MY_LDAP_SEARCHSCOPE} \
 	-b "${MY_LDAP_SEARCHBASE}" "${MY_LDAP_SEARCHFILTER}" \
-	"dn" > ${result_file}
+	"dn" | grep -iE '^dn:' > ${result_file}
 
 ## Loops on results
 while read dnStr
