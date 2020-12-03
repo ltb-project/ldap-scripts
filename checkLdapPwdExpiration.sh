@@ -75,6 +75,18 @@
 MY_LDAP_HOSTURI="ldap://localhost:389"
 
 #
+# LDAP custom parameters
+# eg: -E pr=500/noprompt
+# eg: -o ldif-wrap=no
+# eg: -Q -Y EXTERNAL
+# eg (default): -x
+#
+# For Authentication use : -E pr=500/noprompt -o ldif-wrap=no -x
+# For socket use : -E pr=500/noprompt -o ldif-wrap=no -Q -Y EXTERNAL
+#
+#LDAP_PARAM="-E pr=500/noprompt -o ldif-wrap=no -x"
+
+#
 # LDAP root DN (optional)
 # eg: cn=Manager,dc=example,dc=com
 #
@@ -135,12 +147,11 @@ MY_LDAP_MAIL_ATTR=mail
 #
 export LC_ALL=en_US.UTF-8
 
-
 #
 # Mail from
-#MY_MAIL_FROM=""
-
 #
+#MY_MAIL_FROM="noreply@yo.com"
+
 # Mail body message, with particular variables :
 #   %name : user name
 #   %login : user login
@@ -222,7 +233,9 @@ getTimeInSeconds() {
 tmp_dir="/tmp/$$.checkldap.tmp"
 result_file="${tmp_dir}/res.tmp.1"
 buffer_file="${tmp_dir}/buf.tmp.1"
-ldap_param="-LLL -H ${MY_LDAP_HOSTURI} -x"
+[ -z "${LDAP_PARAM}" ] && LDAP_PARAM="-x" # default authorization
+echo "${LDAP_PARAM}" | grep -E "Q|Y|x" 1>/dev/null || LDAP_PARAM="${LDAP_PARAM} -x"
+ldap_param="${LDAP_PARAM} -LLL -H ${MY_LDAP_HOSTURI}"
 nb_users=0
 nb_expired_users=0
 nb_warning_users=0
