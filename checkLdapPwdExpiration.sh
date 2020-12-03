@@ -135,6 +135,11 @@ MY_LDAP_MAIL_ATTR=mail
 #
 export LC_ALL=en_US.UTF-8
 
+
+#
+# Mail from
+#MY_MAIL_FROM=""
+
 #
 # Mail body message, with particular variables :
 #   %name : user name
@@ -348,7 +353,8 @@ do
 				s/%expireDays/${expireDays}/"`
 
 			# Sending mail...
-			echo "${logmsg}" | ${MY_MAIL_BIN} -s "${MY_MAIL_SUBJECT}" ${mail} >&2
+			[ -z "${MY_MAIL_FROM}" ] || MY_MAIL_BIN="${MY_MAIL_BIN} -r " #MY_MAIL_FROM="-r '${MY_MAIL_FROM}'"
+			echo "${logmsg}" | ${MY_MAIL_BIN} "${MY_MAIL_FROM}" -s "${MY_MAIL_SUBJECT}" ${mail} >&2
 
 			# Print debug information on STDERR
 			echo "${MY_LOG_HEADER} Mail sent to user ${login} (${mail})" >&2
