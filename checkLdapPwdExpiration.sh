@@ -204,7 +204,7 @@ getTimeInSeconds() {
 	os=`uname -s`
 
 	if [ "$1" ]; then
-		date=`${MY_GAWK_BIN} 'BEGIN  { \
+		date=`TZ=UTC ${MY_GAWK_BIN} 'BEGIN  { \
 			if (ARGC == 2) { \
 		        	print mktime(ARGV[1]) \
 			} \
