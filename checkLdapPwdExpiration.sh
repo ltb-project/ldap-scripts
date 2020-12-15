@@ -13,6 +13,7 @@
 # Dependences :
 #   - gawk
 #   - ldapsearch
+#   - mailx
 #
 # Copyright (C) 2008 Clement OUDOT
 # Copyright (C) 2007 Thomas CHEMINEAU
@@ -36,6 +37,11 @@
 #====================================================================
 # Changelog
 #====================================================================
+# Version 0.5 (12/2020)
+# - Add parameters for ldapsearch (to make socket connections or no-wrap or pagination with pr=500/noprompt)
+# - Add parameter for the "from:" of the mail (mailx can't send with From in the body)
+# - Exclude some noise from the ldap global search result (ldap pagination print some comment's lines)
+# - >"LIMIT: multi-lined DN causes errors" - so use '-o ldif-wrap=no' in 'LDAP_PARAM'
 # Version 0.4 (11/2019)
 # - #11 fixed:
 #   Add remaning time before password expiration in mail.
@@ -71,6 +77,7 @@
 #
 # LDAP host URI
 # eg: ldap://localhost:389
+# eg: ldapi://
 #
 MY_LDAP_HOSTURI="ldap://localhost:389"
 
