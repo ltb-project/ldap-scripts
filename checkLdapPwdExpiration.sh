@@ -41,6 +41,7 @@
 # - Add parameters for ldapsearch (to make socket connections or no-wrap or pagination with pr=500/noprompt)
 # - Add parameter for the "from:" of the mail (mailx can't send with From in the body)
 # - Exclude some noise from the ldap global search result (ldap pagination print some comment's lines)
+# - >"LIMIT: multi-lined DN causes errors" - so use '-o ldif-wrap=no' in 'LDAP_PARAM'
 # Version 0.4 (11/2019)
 # - #11 fixed:
 #   Add remaning time before password expiration in mail.
