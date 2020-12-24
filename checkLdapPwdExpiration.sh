@@ -361,6 +361,11 @@ do
 
 	expireDays=`echo $(( (${expireTimeMail} - ${now} )/(60*60*24) ))`
 
+  # Print debug information on STDERR when there is no mail
+  if [ -z "${mail}" ];then
+    echo "${MY_LOG_HEADER} No mail attribute (${MY_LDAP_MAIL_ATTR}) for user ${login}" >&2
+  fi
+
 	# ALL LDAP attributes should be there, else continue to next user
 	if [ "${mail}" -a "${name}" \
 		-a "${login}" -a "${diffTime}" -a "${pwdMaxAge}" ]
