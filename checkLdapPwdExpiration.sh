@@ -240,6 +240,7 @@ getTimeInSeconds() {
 tmp_dir="/tmp/$$.checkldap.tmp"
 result_file="${tmp_dir}/res.tmp.1"
 buffer_file="${tmp_dir}/buf.tmp.1"
+[ -z "${MY_MAIL_FROM}" ] || MY_MAIL_BIN="${MY_MAIL_BIN} -r "
 [ -z "${LDAP_PARAM}" ] && LDAP_PARAM="-x" # default authorization
 echo "${LDAP_PARAM}" | grep -E "Q|Y|x" 1>/dev/null || LDAP_PARAM="${LDAP_PARAM} -x"
 ldap_param="${LDAP_PARAM} -LLL -H ${MY_LDAP_HOSTURI}"
@@ -360,6 +361,11 @@ do
 
 	expireDays=`echo $(( (${expireTimeMail} - ${now} )/(60*60*24) ))`
 
+  # Print debug information on STDERR when there is no mail
+  if [ -z "${mail}" ];then
+    echo "${MY_LOG_HEADER} No mail attribute (${MY_LDAP_MAIL_ATTR}) for user ${login}" >&2
+  fi
+
 	# ALL LDAP attributes should be there, else continue to next user
 	if [ "${mail}" -a "${name}" \
 		-a "${login}" -a "${diffTime}" -a "${pwdMaxAge}" ]
@@ -373,7 +379,6 @@ do
 				s/%expireDays/${expireDays}/"`
 
 			# Sending mail...
-			[ -z "${MY_MAIL_FROM}" ] || MY_MAIL_BIN="${MY_MAIL_BIN} -r " #MY_MAIL_FROM="-r '${MY_MAIL_FROM}'"
 			echo "${logmsg}" | ${MY_MAIL_BIN} "${MY_MAIL_FROM}" -s "${MY_MAIL_SUBJECT}" ${mail} >&2
 
 			# Print debug information on STDERR
