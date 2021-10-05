@@ -83,6 +83,46 @@ use Net::LDAP::LDIF;
 use strict;
 use utf8;
 
+
+
+#====================================================================
+# Functions
+#====================================================================
+
+# unwrap the LDIF file
+sub unwrapLdifFile {
+    my $f = shift;
+    open(FH, '<', $f) or die $!;
+    my @content;
+    my $i = 0;
+
+    while(<FH>){
+       if( $_ =~ /^ / )
+       {
+           my $res = $_;
+           $res =~ s/^[ ]+//g; # remove starting space
+           $content[($i-1)] =~ s/\n//; # remove trailing \n
+           $content[($i-1)] .= $res; # concat values
+       }
+       else
+       {
+           $content[$i] = $_;
+           $i++;
+       }
+    }
+    close(FH);
+    open(FH, '>', $f) or die $!;
+    foreach (@content)
+    {
+        next if $_ =~ /^control:/; # remove the control attribute
+        print FH $_;
+    }
+    close(FH);
+}
+
+
+
+
 #====================================================================
 # Get command line arguments
 #====================================================================
@@ -94,11 +134,15 @@ unless ($file) {
     exit 1;
 }
 
+# unwrap the ldif file (attribute values are no more splitted in multiple lines)
+# + remove control attribute (sometime returned by IBM Tivoli Directory Server)
+#&unwrapLdifFile($file);
+
 my $inldif = Net::LDAP::LDIF->new($file);
 
 # Output file
 my $outldif = Net::LDAP::LDIF->new(
-    "$file.convert", "w",
+    "$file.conv.ldif", "w",
     sort      => $ldif_sort,
     encode    => $ldif_encode,
     lowercase => $ldif_lowercase,
@@ -249,15 +293,36 @@ while ( not $inldif->eof() ) {
             if ( $attr =~ /^$key_map$/i ) {
                 my $mapped_attr = $map->{$key_map};
 
-                if ( $entry->exists($mapped_attr) ) {
+                if ( ref $mapped_attr eq 'ARRAY' ) {
+                    my $vals = [];
+                    foreach my $ma ( @$mapped_attr ) {
 
-                    print STDERR
-                      "Entry $dn: Use $mapped_attr value for attribute $attr\n";
+                        if ( $entry->exists($ma) ) {
+
+                            print STDERR
+                              "Entry $dn: Use $ma value for attribute $attr\n";
+                            push @$vals, ( @{$entry->get_value( $ma, asref => 1 )} );
+                        }
+
+                    }
                     $new_entry->add(
-                        $attr => $entry->get_value( $mapped_attr, asref => 1 )
+                        $attr => $vals,
                     );
                 }
+                else {
+
+                    if ( $entry->exists($mapped_attr) ) {
+
+                        print STDERR
+                          "Entry $dn: Use $mapped_attr value for attribute $attr\n";
+                        $new_entry->add(
+                            $attr => $entry->get_value( $mapped_attr, asref => 1 )
+                        );
+                    }
+
+                }
                 $exclude_attr = 1;
+
 
             }
         }
