@@ -301,7 +301,10 @@ while ( not $inldif->eof() ) {
 
                             print STDERR
                               "Entry $dn: Use $ma value for attribute $attr\n";
-                            push @$vals, ( @{$entry->get_value( $ma, asref => 1 )} );
+                            my @v = @{$entry->get_value( $ma, asref => 1 )};
+                            foreach my $v ( @v ) {
+                                push(@$vals, $v) unless grep{ lc($_) eq lc($v) } @$vals;
+                            }
                         }
 
                     }
