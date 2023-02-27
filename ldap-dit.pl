@@ -25,34 +25,34 @@ use warnings;
 
 use Tree::Simple;
 
-my $annuaire = undef;
-my $apex     = undef;
+my $directory = undef;
+my $apex      = undef;
 
 while (<>) {
     if ( my ($dn) = /^dn: (.+)$/ ) {
-        if ( not defined($annuaire) ) {
-            $annuaire->{$dn} = Tree::Simple->new($dn);
+        if ( not defined($directory) ) {
+            $directory->{$dn} = Tree::Simple->new($dn);
             $apex = $dn;
         }
         else {
-            my ( $premier, $suite ) = $dn =~ /^([^,]+),(.+)$/;
-            $annuaire->{$dn} = Tree::Simple->new( $dn, $annuaire->{$suite} );
+            my ( $first, $next ) = $dn =~ /^([^,]+),(.+)$/;
+            $directory->{$dn} = Tree::Simple->new( $dn, $directory->{$next} );
         }
     }
 }
 
-my $profondeur = -1;
-my @aff_vert   = ();
+my $depth    = -1;
+my @aff_vert = ();
 
 print "$apex\n";
 
-$annuaire->{$apex}->traverse(
+$directory->{$apex}->traverse(
     sub {
         my ($element) = @_;
         my $tag = $element->getNodeValue();
-        $profondeur = $element->getDepth();
-        if ( $profondeur != 0 ) {
-            foreach my $p ( 0 .. $profondeur - 1 ) {
+        $depth = $element->getDepth();
+        if ( $depth != 0 ) {
+            foreach my $p ( 0 .. $depth - 1 ) {
                 if ( $aff_vert[$p] ) {
                     print '|   ';
                 }
@@ -61,11 +61,11 @@ $annuaire->{$apex}->traverse(
                 }
             }
         }
-        print '+-- ' . $tag . "($profondeur)" . "\n";
+        print '+-- ' . $tag . "($depth)" . "\n";
 
         if ( not $element->isLeaf() ) {
-            $aff_vert[$profondeur] = 1 if $element->isFirstChild();
-            $aff_vert[$profondeur] = 0 if $element->isLastChild();
+            $aff_vert[$depth] = 1 if $element->isFirstChild();
+            $aff_vert[$depth] = 0 if $element->isLastChild();
         }
     }
 );
