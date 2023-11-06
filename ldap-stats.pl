@@ -199,6 +199,12 @@ my $dateformat = 0;
 # Use OpenLDAP 2.6 log format
 my $log26 = 0;
 
+# Maximum number of greater qtimes to display
+my $max_qtimes = 10;
+
+# Maximum number of greater etimes to display
+my $max_etimes = 10;
+
 ###################################
 #### Get some options from the user
 ###################################
@@ -262,6 +268,9 @@ my %logarray;            # Hash to store logfiles
 my %filters;             # Hash to store search filters
 my %searchattributes;    # Hash to store specific attributes that are requested
 my %operations;          # Hash to store operations information
+my %qtimes;              # Hash to store qtimes { conn,op => qtime,... }
+my %etimes;              # Hash to store etimes { conn,op => etime,... }
+my %ops;                 # Hash to store operations { conn,op => operation,... }
 
 $operations{CONNECT} = {
     DATA    => 0,
@@ -407,6 +416,22 @@ sub getFullDate
         }
     }
     return $fulldate;
+}
+
+# Function that store the operation lines with correct format
+sub storeOp
+{
+    my $connop = shift;
+    my $line = shift;
+
+    if($ops{"$connop"})
+    {
+        $ops{"$1,$2"} .= "                  $line";
+    }
+    else
+    {
+        $ops{"$1,$2"} .= "$line";
+    }
 }
 
 
@@ -579,10 +604,11 @@ for my $file (@ARGV) {
             ### Check for anonymous binds
         }
         elsif ( $line =~
-/conn=(\d+)  [ ] op=\d+ [ ] BIND [ ] dn="" [ ] method=128/mx
+/conn=(\d+)  [ ] op=(\d+) [ ] BIND [ ] dn="" [ ] method=128/mx
           )
         {
             my $conn  = $1;
+            storeOp("$1,$2","$line");
 
             ### Increment the counters
             if (   defined $conns{$conn}
@@ -601,11 +627,12 @@ for my $file (@ARGV) {
             ### Check for non-anonymous binds
         }
         elsif ( $line =~
-/conn=(\d+) [ ] op=\d+ [ ] BIND [ ] dn="([^"]+)" [ ] mech=/mx
+/conn=(\d+) [ ] op=(\d+) [ ] BIND [ ] dn="([^"]+)" [ ] mech=/mx
           )
         {
             my $conn   = $1;
-            my $binddn = lc $2;
+            storeOp("$1,$2","$line");
+            my $binddn = lc $$;
 
             ### Increment the counters
             if (   defined $conns{$conn}
@@ -624,11 +651,12 @@ for my $file (@ARGV) {
             ### Check the search base
         }
         elsif ( $line =~
-/\bconn=\d+ [ ] op=\d+ [ ] SRCH [ ] base="([^"]*?)" [ ] .*filter="([^"]*?)"/mx
+/\bconn=(\d+) [ ] op=(\d+) [ ] SRCH [ ] base="([^"]*?)" [ ] .*filter="([^"]*?)"/mx
           )
         {
-            my $base   = lc $1;
-            my $filter = $2;
+            my $base   = lc $3;
+            storeOp("$1,$2","$line");
+            my $filter = $4;
 
             ### Stuff the search base into an array
             if ( defined $base ) {
@@ -641,8 +669,9 @@ for my $file (@ARGV) {
 
             ### Check for search attributes
         }
-        elsif ( $line =~ /\bconn=\d+ [ ] op=\d+ [ ] SRCH [ ] attr=(.+)/mx ) {
-            my $attrs = lc $1;
+        elsif ( $line =~ /\bconn=(\d+) [ ] op=(\d+) [ ] SRCH [ ] attr=(.+)/mx ) {
+            storeOp("$1,$2","$line");
+            my $attrs = lc $3;
 
             if ($splitattrs) {
                 for my $attr ( split q{ }, $attrs ) {
@@ -656,10 +685,18 @@ for my $file (@ARGV) {
             ### Check for SEARCHES
         }
         elsif ( $line =~
-            /conn=(\d+) [ ] op=\d+ [ ] SEARCH [ ] RESULT/mx
+            /conn=(\d+) [ ] op=(\d+) [ ] SEARCH [ ] RESULT [ ] .*qtime=([\d.]+) .* etime=([\d.]+)/mx
           )
         {
             my $conn  = $1;
+            my $op    = $2;
+            storeOp("$1,$2","$line");
+            my $qtime = $3;
+            $qtime =~ tr/\.//d; # remove . => microsecond format
+            my $etime = $4;
+            $etime =~ tr/\.//d; # remove . => microsecond format
+            $qtimes{"$conn,$op"} = $qtime;
+            $etimes{"$conn,$op"} = $etime;
 
             ### Increment the counters
             if (   defined $conns{$conn}
@@ -675,9 +712,10 @@ for my $file (@ARGV) {
             ### Check for unbinds
         }
         elsif (
-            $line =~ /conn=(\d+) [ ] op=\d+ [ ] UNBIND/mx )
+            $line =~ /conn=(\d+) [ ] op=(\d+) [ ] UNBIND/mx )
         {
             my $conn  = $1;
+            storeOp("$1,$2","$line");
 
             ### Increment the counters
             if (   defined $conns{$conn}
@@ -694,10 +732,18 @@ for my $file (@ARGV) {
             ### TODO: Add other err=X values from contrib/ldapc++/src/LDAPResult.h
         }
         elsif ( $line =~
-/conn=(\d+) [ ] op=\d+(?: SEARCH)? [ ] RESULT [ ]/mx
+/conn=(\d+) [ ] op=(\d+)(?: SEARCH)? [ ] RESULT [ ] .*qtime=([\d.]+) .* etime=([\d.]+)/mx
           )
         {
             my $conn  = $1;
+            my $op    = $2;
+            storeOp("$1,$2","$line");
+            my $qtime = $3;
+            $qtime =~ tr/\.//d; # remove . => microsecond format
+            my $etime = $4;
+            $etime =~ tr/\.//d; # remove . => microsecond format
+            $qtimes{"$conn,$op"} = $qtime;
+            $etimes{"$conn,$op"} = $etime;
 
             if ( $line =~ /\berr=49\b/mx ) {
                 ### Increment the counters
@@ -715,11 +761,12 @@ for my $file (@ARGV) {
             ### Check for entry changes: add, modify modrdn, delete
         }
         elsif ( $line =~
-/conn=(\d+) [ ] op=\d+ [ ] (ADD|CMP|MOD|MODRDN|DEL) [ ] dn=/mx
+/conn=(\d+) [ ] op=(\d+) [ ] (ADD|CMP|MOD|MODRDN|DEL) [ ] dn=/mx
           )
         {
             my $conn  = $1;
-            my $type  = $2;
+            storeOp("$1,$2","$line");
+            my $type  = $3;
 
             ### Increment the counters
             if (   defined $conns{$conn}
@@ -1254,6 +1301,45 @@ for my $num ( 0 .. $#sarray ) {
     }
     printf "  %-8d    %-60s\n", $binddns{ $sarray[$num] }, $sarray[$num];
 }
+
+###################################################
+### Process greater qtimes and etimes
+###################################################
+
+print "\n\n"
+  . "# qtime (µs)      Operation\n"
+  . "------------      --------------------------------------------------------------\n";
+my %greater_qtimes = map { $_ => $qtimes{$_} } (reverse sort { $qtimes{$a} <=> $qtimes{$b} } keys %qtimes)[0..$max_qtimes];
+foreach my $connop (reverse sort { $greater_qtimes{$a} <=> $greater_qtimes{$b} } keys %greater_qtimes ) {
+    # if we find some associated operation(s) display them
+    if($ops{"$connop"})
+    {
+        printf "  %-12s    %s\n", $greater_qtimes{$connop}, $ops{"$connop"};
+    }
+    # else, just display conn + op
+    else
+    {
+        printf "  %-12s    %s\n", $greater_qtimes{$connop}, "operation not found (conn,op) = (" . $connop . ")" ;
+    }
+}
+
+print "\n\n"
+  . "# etime (µs)      Operation\n"
+  . "------------      --------------------------------------------------------------\n";
+my %greater_etimes = map { $_ => $etimes{$_} } (reverse sort { $etimes{$a} <=> $etimes{$b} } keys %etimes)[0..$max_etimes];
+foreach my $connop (reverse sort { $greater_etimes{$a} <=> $greater_etimes{$b} } keys %greater_etimes ) {
+    # if we find some associated operation(s) display them
+    if($ops{"$connop"})
+    {
+        printf "  %-12s    %s\n", $greater_etimes{$connop}, $ops{"$connop"};
+    }
+    # else, just display conn + op
+    else
+    {
+        printf "  %-12s    %s\n", $greater_etimes{$connop}, "operation not found (conn,op) = (" . $connop . ")" ;
+    }
+}
+
 
 print "\n\n";
 
