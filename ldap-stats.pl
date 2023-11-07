@@ -1307,36 +1307,44 @@ for my $num ( 0 .. $#sarray ) {
 ###################################################
 
 print "\n\n"
-  . "# qtime (µs)      Operation\n"
+  . "# qtime (s)       Operation\n"
   . "------------      --------------------------------------------------------------\n";
-my %greater_qtimes = map { $_ => $qtimes{$_} } (reverse sort { $qtimes{$a} <=> $qtimes{$b} } keys %qtimes)[0..$max_qtimes];
-foreach my $connop (reverse sort { $greater_qtimes{$a} <=> $greater_qtimes{$b} } keys %greater_qtimes ) {
+# sort qtimes by their value (descending) and only select the n first ones
+my %greater_qtimes = map { $_ => $qtimes{$_} } (sort { $qtimes{$b} <=> $qtimes{$a} } keys %qtimes)[0..$max_qtimes];
+# for each greater qtime (from the greater to the lower)
+foreach my $connop (sort { $greater_qtimes{$b} <=> $greater_qtimes{$a} } keys %greater_qtimes ) {
+    # format time from µs (123456789) to s (123.456789)
+    my $qt = substr($greater_qtimes{$connop},0,-6) . '.' . substr($greater_qtimes{$connop},-6);
     # if we find some associated operation(s) display them
     if($ops{"$connop"})
     {
-        printf "  %-12s    %s\n", $greater_qtimes{$connop}, $ops{"$connop"};
+        printf "  %-12s    %s\n", $qt, $ops{"$connop"};
     }
     # else, just display conn + op
     else
     {
-        printf "  %-12s    %s\n", $greater_qtimes{$connop}, "operation not found (conn,op) = (" . $connop . ")" ;
+        printf "  %-12s    %s\n", $qt, "operation not found (conn,op) = (" . $connop . ")" ;
     }
 }
 
 print "\n\n"
-  . "# etime (µs)      Operation\n"
+  . "# etime (s)       Operation\n"
   . "------------      --------------------------------------------------------------\n";
-my %greater_etimes = map { $_ => $etimes{$_} } (reverse sort { $etimes{$a} <=> $etimes{$b} } keys %etimes)[0..$max_etimes];
-foreach my $connop (reverse sort { $greater_etimes{$a} <=> $greater_etimes{$b} } keys %greater_etimes ) {
+# sort etimes by their value (descending) and only select the n first ones
+my %greater_etimes = map { $_ => $etimes{$_} } (sort { $etimes{$b} <=> $etimes{$a} } keys %etimes)[0..$max_etimes];
+# for each greater etime (from the greater to the lower)
+foreach my $connop (sort { $greater_etimes{$b} <=> $greater_etimes{$a} } keys %greater_etimes ) {
+    # format time from µs (123456789) to s (123.456789)
+    my $et = substr($greater_etimes{$connop},0,-6) . '.' . substr($greater_etimes{$connop},-6);
     # if we find some associated operation(s) display them
     if($ops{"$connop"})
     {
-        printf "  %-12s    %s\n", $greater_etimes{$connop}, $ops{"$connop"};
+        printf "  %-12s    %s\n", $et, $ops{"$connop"};
     }
     # else, just display conn + op
     else
     {
-        printf "  %-12s    %s\n", $greater_etimes{$connop}, "operation not found (conn,op) = (" . $connop . ")" ;
+        printf "  %-12s    %s\n", $et, "operation not found (conn,op) = (" . $connop . ")" ;
     }
 }
 
