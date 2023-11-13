@@ -71,7 +71,7 @@ MY_LDAP_BINDPW="secret"
 # Log header format
 # Could include unix commands
 #
-MY_LOG_HEADER="`date +\"%b %e %T\"` `hostname` `basename $0`[$$]:"
+MY_LOG_HEADER="$(date +\"%b %e %T\") $(hostname) $(basename $0)[$$]:"
 
 #------------------------------------------------------------------------
 # INIT
@@ -92,11 +92,11 @@ MY_SCRIPTNAME="$0"
 #
 delete_broken_aliases() {
   # $1: search base dn
-  for alias_dn in `search_dn "$1" "sub" "(objectclass=alias)"`
+  for alias_dn in $(search_dn "$1" "sub" "(objectclass=alias)")
   do
-    object_dn=`search_aliasedObjectName "${alias_dn}"`
-    if [ `test_dn "${object_dn}"` -ne 0 ] ; then
-      if [ `delete_dn "${alias_dn}"` -eq 0 ] ; then
+    object_dn=$(search_aliasedObjectName "${alias_dn}")
+    if [ $(test_dn "${object_dn}") -ne 0 ] ; then
+      if [ $(delete_dn "${alias_dn}") -eq 0 ] ; then
         print_trace "removing broken alias ${alias_dn} [OK]"
       else
         print_trace "removing broken alias ${alias_dn} [FAILED]"
