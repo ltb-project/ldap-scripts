@@ -266,7 +266,7 @@ ${MY_LDAP_SEARCHBIN} "${ldap_param}" -s ${MY_LDAP_SEARCHSCOPE} \
 	"dn" | grep -iE '^dn:' > ${result_file}
 
 ## Loops on results
-while read dnStr
+while read -r dnStr
 do
 	# Do not use blank lines
 	if [ ! "${dnStr}" ]; then
