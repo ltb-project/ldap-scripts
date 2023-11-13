@@ -190,7 +190,7 @@ MY_MAIL_BIN="mail"
 # Log header format
 # Could include unix commands
 #
-MY_LOG_HEADER="`date +\"%b %e %T\"` `hostname` $0[$$]:"
+MY_LOG_HEADER="$(date +\"%b %e %T\") $(hostname) $0[$$]:"
 
 #
 # Path to GAWK (GNU awk) binary
@@ -208,24 +208,24 @@ MY_GAWK_BIN="/usr/bin/gawk"
 #
 getTimeInSeconds() {
 	date=0
-	os=`uname -s`
+	os=$(uname -s)
 
 	if [ "$1" ]; then
-		date=`TZ=UTC ${MY_GAWK_BIN} 'BEGIN  { \
+		date=$(TZ=UTC ${MY_GAWK_BIN} 'BEGIN  { \
 			if (ARGC == 2) { \
 		        	print mktime(ARGV[1]) \
 			} \
-			exit 0 }' "$1"`
+			exit 0 }' "$1")
 	else
 		if [ "${os}" = "SunOS" ]; then
 			# Under Sun Solaris, there is no simple way to
 			# retrieve epoch time.
 			# TODO: manage zulu time (GMT)
-			date=`/usr/bin/truss /usr/bin/date 2>&1 | nawk -F= \
-				'/^time\(\)/ {gsub(/ /,"",$2);print $2}'`
+			date=$(/usr/bin/truss /usr/bin/date 2>&1 | nawk -F= \
+				'/^time\(\)/ {gsub(/ /,"",$2);print $2}')
 		else
-			now=`date +"%Y %m %d %H %M %S" -u`
-			date=`getTimeInSeconds "$now"`
+			now=$(date +"%Y %m %d %H %M %S" -u)
+			date=$(getTimeInSeconds "$now")
 		fi
 	fi
 
@@ -273,25 +273,25 @@ do
 	fi
 
 	# Process ldap search
-	dn=`echo ${dnStr} | cut -d : -f 2`
+	dn=$(echo ${dnStr} | cut -d : -f 2)
 
 	# Increment users counter
-	nb_users=`expr ${nb_users} + 1`
+	nb_users=$(expr ${nb_users} + 1)
 	
 	${MY_LDAP_SEARCHBIN} ${ldap_param} -s base -b "${dn}" \
 		${MY_LDAP_NAME_ATTR} ${MY_LDAP_LOGIN_ATTR} ${MY_LDAP_MAIL_ATTR} pwdChangedTime pwdPolicySubentry \
 		> ${buffer_file}
 
-	login=`grep -w "${MY_LDAP_LOGIN_ATTR}:" ${buffer_file} | cut -d : -f 2 \
-		| sed "s/^ *//;s/ *$//"`
-	name=`grep -w "${MY_LDAP_NAME_ATTR}:" ${buffer_file} | cut -d : -f 2\
-		| sed "s/^ *//;s/ *$//"`
-	mail=`grep -w "${MY_LDAP_MAIL_ATTR}:" ${buffer_file} | cut -d : -f 2 \
-		| sed "s/^ *//;s/ *$//"`
-	pwdChangedTime=`grep -w "pwdChangedTime:" ${buffer_file} \
-		| cut -d : -f 2 | cut -c 1-15 | sed "s/^ *//;s/ *$//"`
-	pwdPolicySubentry=`grep -w "pwdPolicySubentry:" ${buffer_file} \
-		| cut -d : -f 2 | sed "s/^ *//;s/ *$//"`
+	login=$(grep -w "${MY_LDAP_LOGIN_ATTR}:" ${buffer_file} | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//")
+	name=$(grep -w "${MY_LDAP_NAME_ATTR}:" ${buffer_file} | cut -d : -f 2\
+		| sed "s/^ *//;s/ *$//")
+	mail=$(grep -w "${MY_LDAP_MAIL_ATTR}:" ${buffer_file} | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//")
+	pwdChangedTime=$(grep -w "pwdChangedTime:" ${buffer_file} \
+		| cut -d : -f 2 | cut -c 1-15 | sed "s/^ *//;s/ *$//")
+	pwdPolicySubentry=$(grep -w "pwdPolicySubentry:" ${buffer_file} \
+		| cut -d : -f 2 | sed "s/^ *//;s/ *$//")
 
 	# Go to next entry if no pwdChangedTime
 	if [ ! "${pwdChangedTime}" ]; then
@@ -314,14 +314,14 @@ do
 	fi
 	
 	ldap_search="$ldap_search pwdMaxAge pwdExpireWarning pwdMinLength pwdInHistory"
-	pwdMaxAge=`${ldap_search} | grep -w "pwdMaxAge:" | cut -d : -f 2 \
-		| sed "s/^ *//;s/ *$//"`
-	pwdExpireWarning=`${ldap_search} | grep -w "pwdExpireWarning:" | cut -d : -f 2 \
-		| sed "s/^ *//;s/ *$//"`
-	pwdMinLength=`${ldap_search} | grep -w "pwdMinLength:" | cut -d : -f 2 \
-		| sed "s/^ *//;s/ *$//"`
-	pwdInHistory=`${ldap_search} | grep -w "pwdInHistory:" | cut -d : -f 2 \
-		| sed "s/^ *//;s/ *$//"`
+	pwdMaxAge=$(${ldap_search} | grep -w "pwdMaxAge:" | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//")
+	pwdExpireWarning=$(${ldap_search} | grep -w "pwdExpireWarning:" | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//")
+	pwdMinLength=$(${ldap_search} | grep -w "pwdMinLength:" | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//")
+	pwdInHistory=$(${ldap_search} | grep -w "pwdInHistory:" | cut -d : -f 2 \
+		| sed "s/^ *//;s/ *$//")
 
         # Go to next user if no pwdMaxAge (no expiration)
         if [ ! "${pwdMaxAge}" ]; then
@@ -334,32 +334,32 @@ do
 
 	# Retrieves time difference between today and last change.
 	if [ "${pwdChangedTime}" ]; then
-		s=`echo ${pwdChangedTime} | cut -c 13-14`
-		m=`echo ${pwdChangedTime} | cut -c 11-12`
-		h=`echo ${pwdChangedTime} | cut -c 9-10`
-		d=`echo ${pwdChangedTime} | cut -c 7-8`
-		M=`echo ${pwdChangedTime} | cut -c 5-6`
-		y=`echo ${pwdChangedTime} | cut -c 1-4`
-		currentTime=`getTimeInSeconds`
-		pwdChangedTime=`getTimeInSeconds "$y $M $d $h $m $s"`
-		diffTime=`expr ${currentTime} - ${pwdChangedTime}`
+		s=$(echo ${pwdChangedTime} | cut -c 13-14)
+		m=$(echo ${pwdChangedTime} | cut -c 11-12)
+		h=$(echo ${pwdChangedTime} | cut -c 9-10)
+		d=$(echo ${pwdChangedTime} | cut -c 7-8)
+		M=$(echo ${pwdChangedTime} | cut -c 5-6)
+		y=$(echo ${pwdChangedTime} | cut -c 1-4)
+		currentTime=$(getTimeInSeconds)
+		pwdChangedTime=$(getTimeInSeconds "$y $M $d $h $m $s")
+		diffTime=$(expr ${currentTime} - ${pwdChangedTime})
 	fi
 
 	# Go to next user if password already expired
-	expireTime=`expr ${pwdChangedTime} + ${pwdMaxAge}`
+	expireTime=$(expr ${pwdChangedTime} + ${pwdMaxAge})
 	if [ ${currentTime} -gt ${expireTime} ]; then
-		nb_expired_users=`expr ${nb_expired_users} + 1`
+		nb_expired_users=$(expr ${nb_expired_users} + 1)
 		echo "${MY_LOG_HEADER} Password expired for ${login}" >&2
 		continue
 	fi
 	
-	expireTimeTZ=`date -d @$expireTime "+%A %d %B %Y %T"`
+	expireTimeTZ=$(date -d @$expireTime "+%A %d %B %Y %T")
 	
-	expireTimeMail=`date -d @$expireTime "+%s"`
+	expireTimeMail=$(date -d @$expireTime "+%s")
 
-	now=`date +%s`
+	now=$(date +%s)
 
-	expireDays=`echo $(( (${expireTimeMail} - ${now} )/(60*60*24) ))`
+	expireDays=$(echo $(( (${expireTimeMail} - ${now} )/(60*60*24) )))
 
   # Print debug information on STDERR when there is no mail
   if [ -z "${mail}" ];then
@@ -371,12 +371,12 @@ do
 		-a "${login}" -a "${diffTime}" -a "${pwdMaxAge}" ]
 	then
 		# Ajusts time with delay
-		diffTime=`expr ${diffTime} + ${MY_MAIL_DELAY}`
+		diffTime=$(expr ${diffTime} + ${MY_MAIL_DELAY})
 		if [ ${diffTime} -gt ${pwdMaxAge} ]; then
 			logmsg="${MY_MAIL_BODY}"
-			logmsg=`echo ${logmsg} | sed "s/%name/${name}/; \
+			logmsg=$(echo ${logmsg} | sed "s/%name/${name}/; \
 				s/%login/${login}/; s/%expireTimeTZ/${expireTimeTZ}/; s/%pwdMinLength/${pwdMinLength}/; s/%pwdInHistory/${pwdInHistory}/; \
-				s/%expireDays/${expireDays}/"`
+				s/%expireDays/${expireDays}/")
 
 			# Sending mail...
 			echo "${logmsg}" | ${MY_MAIL_BIN} "${MY_MAIL_FROM}" -s "${MY_MAIL_SUBJECT}" ${mail} >&2
@@ -385,7 +385,7 @@ do
 			echo "${MY_LOG_HEADER} Mail sent to user ${login} (${mail})" >&2
 
 			# Increment warning counter
-			nb_warning_users=`expr ${nb_warning_users} + 1`
+			nb_warning_users=$(expr ${nb_warning_users} + 1)
 		fi
 	fi
 
