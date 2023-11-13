@@ -127,7 +127,7 @@ print_trace() {
 #
 print_usage() {
   echo "Usage : ${MY_SCRIPTNAME}]" 1>&2
-  echo "\t-b <searchbase>" 1>&2
+  echo "  -b <searchbase>" 1>&2
 }  
 
 #
