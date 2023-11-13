@@ -276,7 +276,7 @@ do
 	dn=$(echo "${dnStr}" | cut -d : -f 2)
 
 	# Increment users counter
-	nb_users=$(expr "${nb_users}" + 1)
+	nb_users=$(("${nb_users}" + 1))
 	
 	${MY_LDAP_SEARCHBIN} "${ldap_param}" -s base -b "${dn}" \
 		${MY_LDAP_NAME_ATTR} ${MY_LDAP_LOGIN_ATTR} ${MY_LDAP_MAIL_ATTR} pwdChangedTime pwdPolicySubentry \
@@ -342,13 +342,13 @@ do
 		y=$(echo "${pwdChangedTime}" | cut -c 1-4)
 		currentTime=$(getTimeInSeconds)
 		pwdChangedTime=$(getTimeInSeconds "$y $M $d $h $m $s")
-		diffTime=$(expr "${currentTime}" - "${pwdChangedTime}")
+		diffTime=$(("${currentTime}" - "${pwdChangedTime}"))
 	fi
 
 	# Go to next user if password already expired
-	expireTime=$(expr "${pwdChangedTime}" + "${pwdMaxAge}")
+	expireTime=$(("${pwdChangedTime}" + "${pwdMaxAge}"))
 	if [ "${currentTime}" -gt "${expireTime}" ]; then
-		nb_expired_users=$(expr "${nb_expired_users}" + 1)
+		nb_expired_users=$(("${nb_expired_users}" + 1))
 		echo "${MY_LOG_HEADER} Password expired for ${login}" >&2
 		continue
 	fi
@@ -371,7 +371,7 @@ do
 		-a "${login}" -a "${diffTime}" -a "${pwdMaxAge}" ]
 	then
 		# Ajusts time with delay
-		diffTime=$(expr "${diffTime}" + "${MY_MAIL_DELAY}")
+		diffTime=$(("${diffTime}" + "${MY_MAIL_DELAY}"))
 		if [ "${diffTime}" -gt "${pwdMaxAge}" ]; then
 			logmsg="${MY_MAIL_BODY}"
 			logmsg=$(echo "${logmsg}" | sed "s/%name/${name}/; \
@@ -385,7 +385,7 @@ do
 			echo "${MY_LOG_HEADER} Mail sent to user ${login} (${mail})" >&2
 
 			# Increment warning counter
-			nb_warning_users=$(expr "${nb_warning_users}" + 1)
+			nb_warning_users=$(("${nb_warning_users}" + 1))
 		fi
 	fi
 
