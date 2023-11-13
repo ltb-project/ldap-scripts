@@ -256,6 +256,7 @@ fi
 mkdir ${tmp_dir}
 
 if [ "${MY_LDAP_ROOTDN}" ]; then
+	# shellcheck disable=SC2153
 	ldap_param="${ldap_param} -D ${MY_LDAP_ROOTDN} -w ${MY_LDAP_ROOTPW}"
 fi
 
