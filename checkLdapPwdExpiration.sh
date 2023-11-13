@@ -300,7 +300,7 @@ do
 	fi
 
 	# Go to next entry if no pwdPolicySubEntry and no default policy
-	if [ ! "${pwdPolicySubentry}" -a ! "${MY_LDAP_DEFAULTPWDPOLICYDN}" ]; then
+	if [ ! "${pwdPolicySubentry}" ] && [ ! "${MY_LDAP_DEFAULTPWDPOLICYDN}" ]; then
 		echo "${MY_LOG_HEADER} No password policy for ${login}" >&2
 		continue
 	fi
@@ -367,8 +367,8 @@ do
   fi
 
 	# ALL LDAP attributes should be there, else continue to next user
-	if [ "${mail}" -a "${name}" \
-		-a "${login}" -a "${diffTime}" -a "${pwdMaxAge}" ]
+	if [ "${mail}" ] && [ "${name}" ] \
+		&& [ "${login}" ] && [ "${diffTime}" ] && [ "${pwdMaxAge}" ]
 	then
 		# Ajusts time with delay
 		diffTime=$(("${diffTime}" + "${MY_MAIL_DELAY}"))
