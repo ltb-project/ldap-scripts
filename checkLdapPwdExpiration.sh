@@ -229,7 +229,7 @@ getTimeInSeconds() {
 		fi
 	fi
 
-	echo ${date}
+	echo "${date}"
 }
 
 #====================================================================
@@ -255,12 +255,12 @@ if [ -d ${tmp_dir} ]; then
 fi
 mkdir ${tmp_dir}
 
-if [ ${MY_LDAP_ROOTDN} ]; then
+if [ "${MY_LDAP_ROOTDN}" ]; then
 	ldap_param="${ldap_param} -D ${MY_LDAP_ROOTDN} -w ${MY_LDAP_ROOTPW}"
 fi
 
 ## Performs global search
-${MY_LDAP_SEARCHBIN} ${ldap_param} -s ${MY_LDAP_SEARCHSCOPE} \
+${MY_LDAP_SEARCHBIN} "${ldap_param}" -s ${MY_LDAP_SEARCHSCOPE} \
 	-b "${MY_LDAP_SEARCHBASE}" "${MY_LDAP_SEARCHFILTER}" \
 	"dn" | grep -iE '^dn:' > ${result_file}
 
@@ -273,12 +273,12 @@ do
 	fi
 
 	# Process ldap search
-	dn=$(echo ${dnStr} | cut -d : -f 2)
+	dn=$(echo "${dnStr}" | cut -d : -f 2)
 
 	# Increment users counter
-	nb_users=$(expr ${nb_users} + 1)
+	nb_users=$(expr "${nb_users}" + 1)
 	
-	${MY_LDAP_SEARCHBIN} ${ldap_param} -s base -b "${dn}" \
+	${MY_LDAP_SEARCHBIN} "${ldap_param}" -s base -b "${dn}" \
 		${MY_LDAP_NAME_ATTR} ${MY_LDAP_LOGIN_ATTR} ${MY_LDAP_MAIL_ATTR} pwdChangedTime pwdPolicySubentry \
 		> ${buffer_file}
 
@@ -334,28 +334,28 @@ do
 
 	# Retrieves time difference between today and last change.
 	if [ "${pwdChangedTime}" ]; then
-		s=$(echo ${pwdChangedTime} | cut -c 13-14)
-		m=$(echo ${pwdChangedTime} | cut -c 11-12)
-		h=$(echo ${pwdChangedTime} | cut -c 9-10)
-		d=$(echo ${pwdChangedTime} | cut -c 7-8)
-		M=$(echo ${pwdChangedTime} | cut -c 5-6)
-		y=$(echo ${pwdChangedTime} | cut -c 1-4)
+		s=$(echo "${pwdChangedTime}" | cut -c 13-14)
+		m=$(echo "${pwdChangedTime}" | cut -c 11-12)
+		h=$(echo "${pwdChangedTime}" | cut -c 9-10)
+		d=$(echo "${pwdChangedTime}" | cut -c 7-8)
+		M=$(echo "${pwdChangedTime}" | cut -c 5-6)
+		y=$(echo "${pwdChangedTime}" | cut -c 1-4)
 		currentTime=$(getTimeInSeconds)
 		pwdChangedTime=$(getTimeInSeconds "$y $M $d $h $m $s")
-		diffTime=$(expr ${currentTime} - ${pwdChangedTime})
+		diffTime=$(expr "${currentTime}" - "${pwdChangedTime}")
 	fi
 
 	# Go to next user if password already expired
-	expireTime=$(expr ${pwdChangedTime} + ${pwdMaxAge})
-	if [ ${currentTime} -gt ${expireTime} ]; then
-		nb_expired_users=$(expr ${nb_expired_users} + 1)
+	expireTime=$(expr "${pwdChangedTime}" + "${pwdMaxAge}")
+	if [ "${currentTime}" -gt "${expireTime}" ]; then
+		nb_expired_users=$(expr "${nb_expired_users}" + 1)
 		echo "${MY_LOG_HEADER} Password expired for ${login}" >&2
 		continue
 	fi
 	
-	expireTimeTZ=$(date -d @$expireTime "+%A %d %B %Y %T")
+	expireTimeTZ=$(date -d @"$expireTime" "+%A %d %B %Y %T")
 	
-	expireTimeMail=$(date -d @$expireTime "+%s")
+	expireTimeMail=$(date -d @"$expireTime" "+%s")
 
 	now=$(date +%s)
 
@@ -371,21 +371,21 @@ do
 		-a "${login}" -a "${diffTime}" -a "${pwdMaxAge}" ]
 	then
 		# Ajusts time with delay
-		diffTime=$(expr ${diffTime} + ${MY_MAIL_DELAY})
-		if [ ${diffTime} -gt ${pwdMaxAge} ]; then
+		diffTime=$(expr "${diffTime}" + "${MY_MAIL_DELAY}")
+		if [ "${diffTime}" -gt "${pwdMaxAge}" ]; then
 			logmsg="${MY_MAIL_BODY}"
-			logmsg=$(echo ${logmsg} | sed "s/%name/${name}/; \
+			logmsg=$(echo "${logmsg}" | sed "s/%name/${name}/; \
 				s/%login/${login}/; s/%expireTimeTZ/${expireTimeTZ}/; s/%pwdMinLength/${pwdMinLength}/; s/%pwdInHistory/${pwdInHistory}/; \
 				s/%expireDays/${expireDays}/")
 
 			# Sending mail...
-			echo "${logmsg}" | ${MY_MAIL_BIN} "${MY_MAIL_FROM}" -s "${MY_MAIL_SUBJECT}" ${mail} >&2
+			echo "${logmsg}" | ${MY_MAIL_BIN} "${MY_MAIL_FROM}" -s "${MY_MAIL_SUBJECT}" "${mail}" >&2
 
 			# Print debug information on STDERR
 			echo "${MY_LOG_HEADER} Mail sent to user ${login} (${mail})" >&2
 
 			# Increment warning counter
-			nb_warning_users=$(expr ${nb_warning_users} + 1)
+			nb_warning_users=$(expr "${nb_warning_users}" + 1)
 		fi
 	fi
 
