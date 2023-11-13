@@ -359,7 +359,7 @@ do
 
 	now=$(date +%s)
 
-	expireDays=$(( (${expireTimeMail} - ${now}) / (60*60*24) ))
+	expireDays=$(( (expireTimeMail - now) / (60*60*24) ))
 
   # Print debug information on STDERR when there is no mail
   if [ -z "${mail}" ];then
