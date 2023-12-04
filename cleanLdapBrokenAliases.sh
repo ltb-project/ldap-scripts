@@ -71,7 +71,7 @@ MY_LDAP_BINDPW="secret"
 # Log header format
 # Could include unix commands
 #
-MY_LOG_HEADER="`date +\"%b %e %T\"` `hostname` `basename $0`[$$]:"
+MY_LOG_HEADER="$(date +\"%b %e %T\") $(hostname) $(basename "$0")[$$]:"
 
 #------------------------------------------------------------------------
 # INIT
@@ -92,11 +92,11 @@ MY_SCRIPTNAME="$0"
 #
 delete_broken_aliases() {
   # $1: search base dn
-  for alias_dn in `search_dn "$1" "sub" "(objectclass=alias)"`
+  for alias_dn in $(search_dn "$1" "sub" "(objectclass=alias)")
   do
-    object_dn=`search_aliasedObjectName "${alias_dn}"`
-    if [ `test_dn "${object_dn}"` -ne 0 ] ; then
-      if [ `delete_dn "${alias_dn}"` -eq 0 ] ; then
+    object_dn=$(search_aliasedObjectName "${alias_dn}")
+    if [ "$(test_dn "${object_dn}")" -ne 0 ] ; then
+      if [ "$(delete_dn "${alias_dn}")" -eq 0 ] ; then
         print_trace "removing broken alias ${alias_dn} [OK]"
       else
         print_trace "removing broken alias ${alias_dn} [FAILED]"
@@ -110,7 +110,7 @@ delete_broken_aliases() {
 #
 delete_dn() {
   # $1: entry dn
-  ldapdelete ${MY_LDAP_AUTHTOKEN} "$1" > /dev/null 2>&1
+  ldapdelete "${MY_LDAP_AUTHTOKEN}" "$1" > /dev/null 2>&1
   echo $?
 }
 
@@ -127,7 +127,7 @@ print_trace() {
 #
 print_usage() {
   echo "Usage : ${MY_SCRIPTNAME}]" 1>&2
-  echo "\t-b <searchbase>" 1>&2
+  echo "  -b <searchbase>" 1>&2
 }  
 
 #
@@ -135,7 +135,7 @@ print_usage() {
 #
 search_aliasedObjectName() {
   # $1: alias dn
-  ldapsearch -LLL ${MY_LDAP_AUTHTOKEN} -b "$1" -s base aliasedObjectName \
+  ldapsearch -LLL "${MY_LDAP_AUTHTOKEN}" -b "$1" -s base aliasedObjectName \
     | perl -p0e 's/\n //g' | grep -i "aliasedObjectName" | awk -F': ' '{print $2}'
 }
 
@@ -146,7 +146,7 @@ search_dn() {
   # $1: base dn
   # $2: scope
   # $3: filter
-  ldapsearch -LLL ${MY_LDAP_AUTHTOKEN} -b "$1" -S "" -s "$2" "$3" dn \
+  ldapsearch -LLL "${MY_LDAP_AUTHTOKEN}" -b "$1" -S "" -s "$2" "$3" dn \
     | perl -p0e 's/\n //g' | awk -F': ' '{print $2}'
 }
 
@@ -155,7 +155,7 @@ search_dn() {
 #
 test_dn() {
   # $1: entry dn
-  ldapsearch -LLL ${MY_LDAP_AUTHTOKEN} -b "$1" -s base dn > /dev/null 2>&1
+  ldapsearch -LLL "${MY_LDAP_AUTHTOKEN}" -b "$1" -s base dn > /dev/null 2>&1
   echo $?
 }
 
