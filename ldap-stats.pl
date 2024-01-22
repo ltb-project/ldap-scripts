@@ -632,7 +632,7 @@ for my $file (@ARGV) {
         {
             my $conn   = $1;
             storeOp("$1,$2","$line");
-            my $binddn = lc $$;
+            my $binddn = lc $3;
 
             ### Increment the counters
             if (   defined $conns{$conn}
