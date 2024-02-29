@@ -53,7 +53,8 @@ unless( @ARGV)
 }
 
 my $file = shift @ARGV;
-my $filters; # { "filter" => occurrence }
+my $full_filters; # { "full_filter" => occurrence }
+my $comp_filters; # { "component_filter" => occurrence }
 
 print "Analyze file $file\n";
 
@@ -62,16 +63,32 @@ while(my $line = <$fh>)
 {
   if( $line =~ /filter="([^"]+)"/ )
   {
-    my $filter = "$1";
-    $filter =~ s/\(([^=]+)=([^)]+)\)/"($1=" . &format_value("$2") . ")"/eg;
-    $filters->{$filter}++;
+    my $full_filter = "$1";
+    my $comp_filter = "$1";
+
+    # Compute full filter
+    $full_filter =~ s/\(([^=(]+)=([^)]+)\)/"($1=" . &format_value("$2") . ")"/eg;
+    $full_filters->{$full_filter}++;
+
+    # Compute components of filter
+    while ($comp_filter =~ /\(([^=(]+)=([^)]+)\)/g) {
+      $comp_filters->{"($1=" . &format_value("$2") . ")"}++;
+    }
   }
 }
 
-# Print table of filters, ordered by occurrences
-print "| Occurrences | Filters                                                        |\n";
+# Print table of full_filters, ordered by occurrences
+print "| Occurrences | Full filters                                                   |\n";
 print "+-------------+----------------------------------------------------------------+\n";
-foreach my $filter (sort {$filters->{$b} <=> $filters->{$a}} keys %$filters) {
-  print sprintf "|%12s | %62s |\n", $filters->{$filter}, $filter;
+foreach my $filter (sort {$full_filters->{$b} <=> $full_filters->{$a}} keys %$full_filters) {
+  print sprintf "|%12s | %62s |\n", $full_filters->{$filter}, $filter;
+}
+
+# Print table of filter components, ordered by occurrences
+print "\n";
+print "| Occurrences | Filter components                                              |\n";
+print "+-------------+----------------------------------------------------------------+\n";
+foreach my $filter (sort {$comp_filters->{$b} <=> $comp_filters->{$a}} keys %$comp_filters) {
+  print sprintf "|%12s | %62s |\n", $comp_filters->{$filter}, $filter;
 }
 
