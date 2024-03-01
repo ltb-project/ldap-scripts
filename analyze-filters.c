@@ -38,6 +38,7 @@
 #include <regex.h>
 #include <string.h>
 
+#define LINE_MAX_SIZE 16384
 #define FILTER_MAX_SIZE 1024
 #define MAX_FILTERS 256
 #define ATTR_MAX_SIZE 128
@@ -250,7 +251,7 @@ int main( int argc, char **argv )
 {
     // file stuff
     FILE * fp;
-    char * line = NULL;
+    char line[LINE_MAX_SIZE];
     size_t len = 0;
     ssize_t read;
 
@@ -291,8 +292,9 @@ int main( int argc, char **argv )
     }
 
 
+
     // parse file
-    while ((read = getline(&line, &len, fp)) != -1)
+    while (fgets(line,LINE_MAX_SIZE, fp))
     {
         // only get filter="..." part
         if ((rc = regexec(&preg, line, nmatch, pmatch, 0)) == 0)
@@ -309,9 +311,6 @@ int main( int argc, char **argv )
     regfree(&preg);
     regfree(&pregf);
     fclose(fp);
-    if (line)
-        free(line);
-
 
     sort_filters(full_filter);
     display_filters(full_filter);
