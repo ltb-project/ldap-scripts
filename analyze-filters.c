@@ -35,6 +35,7 @@
 #define PCRE2_CODE_UNIT_WIDTH 8
 #define LINE_MAX_SIZE 16384
 #define FILTER_MAX_SIZE 1024
+#define FILTER_COMP_MAX_SIZE 128
 #define MAX_FILTERS 256
 #define ATTR_MAX_SIZE 128
 #define VAL_MAX_SIZE 1024
@@ -111,8 +112,6 @@ void display_filters(sfilter *full_filter)
     int i = 0;
     char occurrence[13];
 
-    printf("| Occurrences | Full filters                                                   |\n");
-    printf("+-------------+----------------------------------------------------------------+\n");
     while( full_filter[i].occurrence != 0 )
     {
         sprintf(occurrence, "%12d", full_filter[i].occurrence);
@@ -199,7 +198,7 @@ void format_value(char *formatted_value, char *value)
     }
 }
 
-void compute_full_filter(sfilter *full_filter, char *current_filter, pcre2_code *ref)
+void compute_filter(sfilter *full_filter, sfilter *comp_filter, char *current_filter, pcre2_code *ref)
 {
 
     char *cursor;
@@ -225,6 +224,7 @@ void compute_full_filter(sfilter *full_filter, char *current_filter, pcre2_code 
     char value[VAL_MAX_SIZE];
     char formatted_value[VAL_MAX_SIZE];
     char formatted_filter[FILTER_MAX_SIZE] = "";
+    char formatted_comp_filter[FILTER_COMP_MAX_SIZE];
 
 
     cursor = current_filter;
@@ -239,6 +239,7 @@ void compute_full_filter(sfilter *full_filter, char *current_filter, pcre2_code 
         else if(rc == 3) // 3 = one regex matching (1) + two matching group (2)
         {
             formatted_value[0] = '\0'; // empty string
+            formatted_comp_filter[0] = '\0'; // reinitialize component filter
 
             ovector = pcre2_get_ovector_pointer(match_data);
             attr_start = cursor + ovector[2*attr_pos];
@@ -256,7 +257,15 @@ void compute_full_filter(sfilter *full_filter, char *current_filter, pcre2_code 
             value[(int)val_len] = '\0';
             format_value(formatted_value, value);
 
-            // combine format_filter parts
+            // compute component filter, and store it
+            strcat(formatted_comp_filter, "(");
+            strcat(formatted_comp_filter, attribute);
+            strcat(formatted_comp_filter, "=");
+            strcat(formatted_comp_filter, formatted_value);
+            strcat(formatted_comp_filter, ")");
+            insert_filter(comp_filter, formatted_comp_filter);
+
+            // combine format_filter parts for computing full_filter
             strncat(formatted_filter, cursor, ovector[2*attr_pos]);
             strcat(formatted_filter, attribute);
             strcat(formatted_filter, "=");
@@ -313,7 +322,7 @@ int main( int argc, char **argv )
 
     // structures storing the filters
     sfilter full_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
-    //sfilter comp_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
+    sfilter comp_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
 
 
     if(argc != 2)
@@ -362,7 +371,7 @@ int main( int argc, char **argv )
             PCRE2_SIZE slen = ovector[2*i+1] - ovector[2*i];
             strncpy (current_filter, (char *)start, (int)slen );
             current_filter[(int)slen] = '\0';
-            compute_full_filter(full_filter, current_filter, ref);
+            compute_filter(full_filter, comp_filter, current_filter, ref);
         }
         else if (rc < 0)
         {
@@ -378,7 +387,15 @@ int main( int argc, char **argv )
     fclose(fp);
 
     sort_filters(full_filter);
+    printf("| Occurrences | Full filters                                                   |\n");
+    printf("+-------------+----------------------------------------------------------------+\n");
     display_filters(full_filter);
+
+    sort_filters(comp_filter);
+    printf("\n");
+    printf("| Occurrences | Filter components                                              |\n");
+    printf("+-------------+----------------------------------------------------------------+\n");
+    display_filters(comp_filter);
 
     exit(0);
 }
