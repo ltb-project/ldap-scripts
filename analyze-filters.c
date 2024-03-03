@@ -24,25 +24,26 @@
 
   Installation:
     1. Enable a minimum of 'loglevel 256' in OpenLDAP configuration
-    2. Copy the perl script to a suitable location.
+    2. Copy the program to a suitable location.
     3. Refer to the usage section for options and examples.
 
   Usage:
-    gcc analyze-filters.c -o analyze-filters
+    gcc -Wall -o analyze-filters analyze-filters.c -lpcre2-8
     ./analyze-filters slapd.log
 */
 
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <regex.h>
-#include <string.h>
-
+#define PCRE2_CODE_UNIT_WIDTH 8
 #define LINE_MAX_SIZE 16384
 #define FILTER_MAX_SIZE 1024
 #define MAX_FILTERS 256
 #define ATTR_MAX_SIZE 128
 #define VAL_MAX_SIZE 1024
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pcre2.h>
 
 typedef struct sfilter sfilter;
 struct sfilter
@@ -198,14 +199,26 @@ void format_value(char *formatted_value, char *value)
     }
 }
 
-void compute_full_filter(sfilter *full_filter, char *current_filter, regex_t *pregf)
+void compute_full_filter(sfilter *full_filter, char *current_filter, pcre2_code *ref)
 {
 
-    // regex stuff
-    int rc;
-    size_t nmatch = 3; // 3 matches: the total regex + 2 capture groups
-    regmatch_t pmatch[3];
     char *cursor;
+
+    /* for pcre2_compile */
+    PCRE2_SIZE erroffset;
+    int errcode;
+    PCRE2_UCHAR8 buffer[128];
+
+    /* for pcre2_match */
+    int rc;
+    PCRE2_SIZE* ovector;
+    uint32_t options = 0;
+    pcre2_match_data *match_data;
+    uint32_t ovecsize = 128;
+    PCRE2_SPTR attr_start, val_start;
+    PCRE2_SIZE attr_len, val_len;
+    PCRE2_SIZE attr_pos = 1; // first match is at position 1
+    PCRE2_SIZE val_pos = 2; // second match is at position 2
 
     // temporary string to store attribute
     char attribute[ATTR_MAX_SIZE];
@@ -215,32 +228,52 @@ void compute_full_filter(sfilter *full_filter, char *current_filter, regex_t *pr
 
 
     cursor = current_filter;
-    while ( ( rc = regexec(pregf, cursor, nmatch, pmatch, 0)) == 0 )
+    match_data = pcre2_match_data_create(ovecsize, NULL);
+    while ( (rc = pcre2_match(ref, cursor, strlen(cursor), 0, options, match_data, NULL)) >= 0 )
     {
-        if( pmatch[1].rm_so != ( (size_t) - 1 ) && pmatch[2].rm_so != ( (size_t) - 1 ) )
+
+        if(rc == 0) {
+            // error
+            fprintf(stderr,"offset vector too small: %d\n",rc);
+        }
+        else if(rc == 3) // 3 = one regex matching (1) + two matching group (2)
         {
             formatted_value[0] = '\0'; // empty string
 
+            ovector = pcre2_get_ovector_pointer(match_data);
+            attr_start = cursor + ovector[2*attr_pos];
+            attr_len = ovector[2*attr_pos+1] - ovector[2*attr_pos];
+            val_start = cursor + ovector[2*val_pos];
+            val_len = ovector[2*val_pos+1] - ovector[2*val_pos];
+
+
             // get attribute
-            strncpy (attribute, &cursor[(pmatch[1].rm_so)], ( pmatch[1].rm_eo - pmatch[1].rm_so ) );
-            attribute[(pmatch[1].rm_eo - pmatch[1].rm_so)] = '\0';
+            strncpy (attribute, (char *)attr_start, (int)attr_len );
+            attribute[(int)attr_len] = '\0';
 
             // get value
-            strncpy (value, &cursor[(pmatch[2].rm_so)], ( pmatch[2].rm_eo - pmatch[2].rm_so ) );
-            value[(pmatch[2].rm_eo - pmatch[2].rm_so)] = '\0';
+            strncpy (value, (char *)val_start, (int)val_len );
+            value[(int)val_len] = '\0';
             format_value(formatted_value, value);
 
             // combine format_filter parts
-            strncat(formatted_filter, cursor, pmatch[1].rm_so);
+            strncat(formatted_filter, cursor, ovector[2*attr_pos]);
             strcat(formatted_filter, attribute);
             strcat(formatted_filter, "=");
             strcat(formatted_filter, formatted_value);
             strcat(formatted_filter, ")");
 
-            cursor += pmatch[2].rm_eo;
+            cursor += ovector[2*val_pos+1];
             cursor++;
+
         }
+        else
+        {
+            fprintf(stderr,"dummy capture groupe number: %d\n",rc);
+        }
+
     }
+    pcre2_match_data_free(match_data);
 
     strcat(formatted_filter, cursor);
     insert_filter(full_filter, formatted_filter);
@@ -252,23 +285,35 @@ int main( int argc, char **argv )
     // file stuff
     FILE * fp;
     char line[LINE_MAX_SIZE];
-    size_t len = 0;
-    ssize_t read;
 
     // regex stuff
-    regex_t preg, pregf;
-    char *pattern = "filter=\"([^\"]+)\"";
-    char *patternf = "\\(([^=\\(]+)=([^\\)]+)\\)";
+    /* for pcre2_compile */
+    pcre2_code *re, *ref;
+    PCRE2_SIZE erroffset;
+    int errcode;
+    PCRE2_UCHAR8 buffer[128];
+
+    /* for pcre2_match */
     int rc;
-    size_t nmatch = 2; // 2 matches: the total regex + the first capture group
-    regmatch_t pmatch[2];
+    PCRE2_SIZE* ovector;
+
+    const char *pattern = "filter=\"([^\"]+)\"";
+    size_t pattern_size = strlen(pattern);
+
+    const char *patternf = "\\(([^=(]+)=([^)]+)\\)";
+    size_t patternf_size = strlen(patternf);
+
+    uint32_t options = 0;
+
+    pcre2_match_data *match_data;
+    uint32_t ovecsize = 128;
 
     // temporary string to store current filter
     char current_filter[FILTER_MAX_SIZE];
 
     // structures storing the filters
     sfilter full_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
-    sfilter comp_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
+    //sfilter comp_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
 
 
     if(argc != 2)
@@ -281,35 +326,55 @@ int main( int argc, char **argv )
     if (fp == NULL)
         exit(1);
 
-    if ((rc = regcomp(&preg, pattern, REG_EXTENDED)) != 0) {
-       printf("regcomp() failed, returning nonzero (%d)\n", rc);
-       exit(1);
+
+    re = pcre2_compile(pattern, pattern_size, options, &errcode, &erroffset, NULL);
+    if (re == NULL)
+    {
+        pcre2_get_error_message(errcode, buffer, 120);
+        fprintf(stderr,"%d\t%s\n", errcode, buffer);
+        return 1;
     }
 
-    if ((rc = regcomp(&pregf, patternf, REG_EXTENDED)) != 0) {
-       printf("regcomp() failed, returning nonzero (%d)\n", rc);
-       exit(2);
+    ref = pcre2_compile(patternf, patternf_size, options, &errcode, &erroffset, NULL);
+    if (ref == NULL)
+    {
+        pcre2_get_error_message(errcode, buffer, 120);
+        fprintf(stderr,"%d\t%s\n", errcode, buffer);
+        return 1;
     }
-
-
 
     // parse file
     while (fgets(line,LINE_MAX_SIZE, fp))
     {
         // only get filter="..." part
-        if ((rc = regexec(&preg, line, nmatch, pmatch, 0)) == 0)
-        {
-            if( pmatch[1].rm_so != ( (size_t) - 1 ) )
-            {
-                strncpy (current_filter, &line[(pmatch[1].rm_so)], ( pmatch[1].rm_eo - pmatch[1].rm_so ) );
-                current_filter[(pmatch[1].rm_eo - pmatch[1].rm_so)] = '\0';
-                compute_full_filter(full_filter, current_filter, &pregf);
-            }
+        match_data = pcre2_match_data_create(ovecsize, NULL);
+        rc = pcre2_match(re, line, strlen(line), 0, options, match_data, NULL);
+
+        if(rc == 0) {
+            // error
+            fprintf(stderr,"offset vector too small: %d",rc);
         }
+        else if(rc == 2) // 2 = regex matching (1) + one matching group (1)
+        {
+            ovector = pcre2_get_ovector_pointer(match_data);
+            PCRE2_SIZE i = 1; // first match is at position 1
+            PCRE2_SPTR start = line + ovector[2*i];
+            PCRE2_SIZE slen = ovector[2*i+1] - ovector[2*i];
+            strncpy (current_filter, (char *)start, (int)slen );
+            current_filter[(int)slen] = '\0';
+            compute_full_filter(full_filter, current_filter, ref);
+        }
+        else if (rc < 0)
+        {
+            // no match
+        }
+
+        pcre2_match_data_free(match_data);
+
     }
 
-    regfree(&preg);
-    regfree(&pregf);
+    pcre2_code_free(re);
+    pcre2_code_free(ref);
     fclose(fp);
 
     sort_filters(full_filter);
