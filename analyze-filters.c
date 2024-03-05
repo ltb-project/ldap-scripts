@@ -325,16 +325,11 @@ int main( int argc, char **argv )
     sfilter comp_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
 
 
-    if(argc != 2)
+    if(argc < 2)
     {
-        printf("Missing file name\n");
+        fprintf(stderr,"Missing file name\n");
         exit(1);
     }
-
-    fp = fopen(argv[1], "r");
-    if (fp == NULL)
-        exit(1);
-
 
     re = pcre2_compile(pattern, pattern_size, options, &errcode, &erroffset, NULL);
     if (re == NULL)
@@ -352,39 +347,51 @@ int main( int argc, char **argv )
         return 1;
     }
 
-    // parse file
-    while (fgets(line,LINE_MAX_SIZE, fp))
+
+    for( int i = 1; i < argc ; i++ )
     {
-        // only get filter="..." part
-        match_data = pcre2_match_data_create(ovecsize, NULL);
-        rc = pcre2_match(re, line, strlen(line), 0, options, match_data, NULL);
-
-        if(rc == 0) {
-            // error
-            fprintf(stderr,"offset vector too small: %d",rc);
-        }
-        else if(rc == 2) // 2 = regex matching (1) + one matching group (1)
+        fp = fopen(argv[i], "r");
+        if (fp == NULL)
         {
-            ovector = pcre2_get_ovector_pointer(match_data);
-            PCRE2_SIZE i = 1; // first match is at position 1
-            PCRE2_SPTR start = line + ovector[2*i];
-            PCRE2_SIZE slen = ovector[2*i+1] - ovector[2*i];
-            strncpy (current_filter, (char *)start, (int)slen );
-            current_filter[(int)slen] = '\0';
-            compute_filter(full_filter, comp_filter, current_filter, ref);
+            fprintf(stderr,"Error while trying to open %s\n", argv[i]);
+            exit(1);
         }
-        else if (rc < 0)
+
+        // parse file
+        while (fgets(line,LINE_MAX_SIZE, fp))
         {
-            // no match
+            // only get filter="..." part
+            match_data = pcre2_match_data_create(ovecsize, NULL);
+            rc = pcre2_match(re, line, strlen(line), 0, options, match_data, NULL);
+
+            if(rc == 0) {
+                // error
+                fprintf(stderr,"offset vector too small: %d",rc);
+            }
+            else if(rc == 2) // 2 = regex matching (1) + one matching group (1)
+            {
+                ovector = pcre2_get_ovector_pointer(match_data);
+                PCRE2_SIZE i = 1; // first match is at position 1
+                PCRE2_SPTR start = line + ovector[2*i];
+                PCRE2_SIZE slen = ovector[2*i+1] - ovector[2*i];
+                strncpy (current_filter, (char *)start, (int)slen );
+                current_filter[(int)slen] = '\0';
+                compute_filter(full_filter, comp_filter, current_filter, ref);
+            }
+            else if (rc < 0)
+            {
+                // no match
+            }
+
+            pcre2_match_data_free(match_data);
+
         }
 
-        pcre2_match_data_free(match_data);
-
+        fclose(fp);
     }
 
     pcre2_code_free(re);
     pcre2_code_free(ref);
-    fclose(fp);
 
     sort_filters(full_filter);
     printf("| Occurrences | Full filters                                                   |\n");

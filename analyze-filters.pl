@@ -52,29 +52,33 @@ unless( @ARGV)
   exit 1;
 }
 
-my $file = shift @ARGV;
 my $full_filters; # { "full_filter" => occurrence }
 my $comp_filters; # { "component_filter" => occurrence }
 
-print "Analyze file $file\n";
 
-open(my $fh, "<", "$file") or die "Can't open < $file: $!";
-while(my $line = <$fh>)
+foreach my $file (@ARGV)
 {
-  if( $line =~ /filter="([^"]+)"/ )
-  {
-    my $full_filter = "$1";
-    my $comp_filter = "$1";
 
-    # Compute full filter
-    $full_filter =~ s/\(([^=(]+)=([^)]+)\)/"($1=" . &format_value("$2") . ")"/eg;
-    $full_filters->{$full_filter}++;
+    print "Analyze file $file\n";
 
-    # Compute components of filter
-    while ($comp_filter =~ /\(([^=(]+)=([^)]+)\)/g) {
-      $comp_filters->{"($1=" . &format_value("$2") . ")"}++;
+    open(my $fh, "<", "$file") or die "Can't open < $file: $!";
+    while(my $line = <$fh>)
+    {
+      if( $line =~ /filter="([^"]+)"/ )
+      {
+        my $full_filter = "$1";
+        my $comp_filter = "$1";
+
+        # Compute full filter
+        $full_filter =~ s/\(([^=(]+)=([^)]+)\)/"($1=" . &format_value("$2") . ")"/eg;
+        $full_filters->{$full_filter}++;
+
+        # Compute components of filter
+        while ($comp_filter =~ /\(([^=(]+)=([^)]+)\)/g) {
+          $comp_filters->{"($1=" . &format_value("$2") . ")"}++;
+        }
+      }
     }
-  }
 }
 
 # Print table of full_filters, ordered by occurrences
