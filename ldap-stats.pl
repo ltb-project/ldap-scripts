@@ -680,9 +680,11 @@ for my $file (@ARGV) {
 
             ### Check the search base
         }
-        elsif ( $line =~
-/\bconn=(\d+) [ ] op=(\d+) [ ] SRCH [ ] base="([^"]*?)" [ ] .*filter="([^"]*?)"/mx
-          )
+        elsif (
+            ($sunds and $line =~ /conn=(\d+) op=(\d+) msgId=\d+ - SRCH base="([^"]*?)" scope=\d filter="([^"]*?)" attrs=(.+)/m )
+                or $line =~
+            /\bconn=(\d+) [ ] op=(\d+) [ ] SRCH [ ] base="([^"]*?)" [ ] .*filter="([^"]*?)"/mx
+        )
         {
             my $base   = lc $3;
             storeOp("$1,$2","$line");
@@ -695,6 +697,20 @@ for my $file (@ARGV) {
 
             if ( defined $filter ) {
                 $filters{$filter}++;
+            }
+
+            if ($sunds) {
+                my $attrs = lc $5;
+                $attrs =~ s/^"//;
+                $attrs =~ s/"$//;
+                if ($splitattrs) {
+                    for my $attr ( split q{ }, $attrs ) {
+                        $searchattributes{$attr}++;
+                    }
+                }
+                else {
+                    $searchattributes{$attrs}++;
+                }
             }
 
             ### Check for search attributes
