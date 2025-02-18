@@ -627,9 +627,13 @@ for my $file (@ARGV) {
 
             ### Check for anonymous binds
         }
-        elsif ( $line =~
-/conn=(\d+)  [ ] op=(\d+) [ ] BIND [ ] dn="" [ ] method=128/mx
-          )
+        elsif (
+            (
+                $sunds and $line =~ /conn=(\d+) op=(\d+) msgId=\d+ - BIND dn="" method=128/m
+            )
+                or  $line =~
+            /conn=(\d+)  [ ] op=(\d+) [ ] BIND [ ] dn="" [ ] method=128/mx
+        )
         {
             my $conn  = $1;
             storeOp("$1,$2","$line");
@@ -650,9 +654,11 @@ for my $file (@ARGV) {
 
             ### Check for non-anonymous binds
         }
-        elsif ( $line =~
-/conn=(\d+) [ ] op=(\d+) [ ] BIND [ ] dn="([^"]+)" [ ] mech=/mx
-          )
+        elsif (
+            ($sunds and $line =~ /conn=(\d+) op=(\d+) msgId=\d+ - BIND dn="([^"]+)" method=/m )
+                or $line =~
+            /conn=(\d+) [ ] op=(\d+) [ ] BIND [ ] dn="([^"]+)" [ ] mech=/mx
+        )
         {
             my $conn   = $1;
             storeOp("$1,$2","$line");
