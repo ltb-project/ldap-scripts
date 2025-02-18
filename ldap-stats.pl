@@ -779,7 +779,8 @@ for my $file (@ARGV) {
             ### Check for unbinds
         }
         elsif (
-            $line =~ /conn=(\d+) [ ] op=(\d+) [ ] UNBIND/mx )
+            ( $sunds and $line =~ /conn=(\d+) op=(\d+) msgId=\d+ - UNBIND/m)
+                or $line =~ /conn=(\d+) [ ] op=(\d+) [ ] UNBIND/mx )
         {
             my $conn  = $1;
             storeOp("$1,$2","$line");
