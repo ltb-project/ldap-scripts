@@ -849,6 +849,33 @@ for my $file (@ARGV) {
                 }
             }
 
+            ### Check the result of the last operation (log format SUNDS)
+            ### TODO: Add other err=X values from contrib/ldapc++/src/LDAPResult.h
+        }
+        elsif ( $sunds and $line =~
+/conn=(\d+) op=(\d+) msgId=\d+ - RESULT err=\d+ tag=\d+ nentries=\d+ etime=([\d.]+)/m
+          )
+        {
+            my $conn  = $1;
+            my $op    = $2;
+            storeOp("$1,$2","$line");
+            my $etime = $3;
+            $etime =~ tr/\.//d; # remove . => microsecond format
+            $etimes{"$conn,$op"} = $etime;
+
+            if ( $line =~ /\berr=49\b/mx ) {
+                ### Increment the counters
+                if (   defined $conns{$conn}
+                    && defined $hosts{ $conns{$conn} } )
+                {
+                    $hosts{ $conns{$conn} }{AUTHFAILURES}++;
+                    $hours{$hour}{AUTHFAILURES}++;
+                    $days{$day}{AUTHFAILURES}++;
+                    $months{$month}{AUTHFAILURES}++;
+                    $stats{TOTAL_AUTHFAILURES}++;
+                }
+            }
+
             ### Check for entry changes: add, modify modrdn, delete
         }
         elsif ( $line =~
