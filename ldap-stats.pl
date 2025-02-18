@@ -8,9 +8,12 @@
 # Author: LDAP Tool Box project
 # Author: David Coutadeur <david.coutadeur@gmail.com>
 #
-# Current Version: 8
+# Current Version: 9
 #
 # Revision History:
+#
+#  Version 9
+#  - add option --sunds to parse Sun DS logs (#36)
 #
 #  Version 8
 #  - add option --log24 for old openldap log format (logs without qtime/etime) (#35)
@@ -172,7 +175,8 @@ sub usage {
       . "   -s                     Split attributes found used in searches\n"
       . "   -D                     Use RFC5424 date format\n"
       . "   --log24                Use OpenLDAP 2.4 log format (no qtime/etime)\n"
-      . "   --log26                Use OpenLDAP 2.6 log format\n";
+      . "   --log26                Use OpenLDAP 2.6 log format\n"
+      . "   --sunds                Use Sun DS log format\n";
     return;
 }
 
@@ -207,6 +211,9 @@ my $log24 = 0;
 # Use OpenLDAP 2.6 log format
 my $log26 = 0;
 
+# Use SunDS log format
+my $sunds = 0;
+
 # Maximum number of greater qtimes to display
 my $max_qtimes = 10;
 
@@ -230,6 +237,7 @@ GetOptions(
     'split|s'        => \$splitattrs,
     'log24'          => \$log24,
     'log26'          => \$log26,
+    'sunds'          => \$sunds,
 );
 
 ### print a nice usage message
@@ -507,14 +515,21 @@ for my $file (@ARGV) {
         my ( $month, $day, $hour ) = getTimeComponents($line);
 
         ### Check for a new connection
-        if ( $line =~
-/conn=(\d+) [ ] fd=\d+ [ ] (?:ACCEPT|connection) [ ] from/mx
-           )
+        if (
+            ( $sunds and $line =~
+                /conn=(\d+) op=[-]?\d+ msgId=[-]?\d+ - fd=\d+ slot=\d+ LDAP connection from/m
+            )
+                or  $line =~
+            /conn=(\d+) [ ] fd=\d+ [ ] (?:ACCEPT|connection) [ ] from/mx
+        )
         {
             my $conn  = $1;
             my $host;
 
-            if ( $line =~ /IP=(\d+\.\d+\.\d+\.\d+):/mx ) {
+            if ( $sunds and $line =~ /from (\d+\.\d+\.\d+\.\d+)/m ) {
+                $host = $1;
+            }
+            elsif ( $line =~ /IP=(\d+\.\d+\.\d+\.\d+):/mx ) {
                 $host = $1;
             }
             elsif ( $line =~ /PATH=(\S+)/mx ) {
