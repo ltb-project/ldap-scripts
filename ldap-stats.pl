@@ -686,6 +686,7 @@ for my $file (@ARGV) {
             /\bconn=(\d+) [ ] op=(\d+) [ ] SRCH [ ] base="([^"]*?)" [ ] .*filter="([^"]*?)"/mx
         )
         {
+            my $conn = $1;
             my $base   = lc $3;
             storeOp("$1,$2","$line");
             my $filter = $4;
@@ -710,6 +711,16 @@ for my $file (@ARGV) {
                 }
                 else {
                     $searchattributes{$attrs}++;
+                }
+                ### Increment the counters
+                if (   defined $conns{$conn}
+                    && defined $hosts{ $conns{$conn} } )
+                {
+                    $hosts{ $conns{$conn} }{SRCH}++;
+                    $hours{$hour}{SRCH}++;
+                    $days{$day}{SRCH}++;
+                    $months{$month}{SRCH}++;
+                    $stats{TOTAL_SRCH}++;
                 }
             }
 
@@ -878,7 +889,9 @@ for my $file (@ARGV) {
 
             ### Check for entry changes: add, modify modrdn, delete
         }
-        elsif ( $line =~
+        elsif (
+            ($sunds and $line =~ /conn=(\d+) op=(\d+) msgId=\d+ - (ADD|CMP|MOD|MODRDN|DEL)/m )
+                or $line =~
 /conn=(\d+) [ ] op=(\d+) [ ] (ADD|CMP|MOD|MODRDN|DEL) [ ] dn=/mx
           )
         {
