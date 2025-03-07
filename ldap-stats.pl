@@ -1439,24 +1439,27 @@ for my $num ( 0 .. $#sarray ) {
 
 unless($log24)
 {
-    print "\n\n"
-      . "# qtime (s)       Operation\n"
-      . "------------      --------------------------------------------------------------\n";
-    # sort qtimes by their value (descending) and only select the n first ones
-    my %greater_qtimes = map { $_ => $qtimes{$_} } (sort { $qtimes{$b} <=> $qtimes{$a} } keys %qtimes)[0..$max_qtimes];
-    # for each greater qtime (from the greater to the lower)
-    foreach my $connop (sort { $greater_qtimes{$b} <=> $greater_qtimes{$a} } keys %greater_qtimes ) {
-        # format time from µs (123456789) to s (123.456789)
-        my $qt = substr($greater_qtimes{$connop},0,-6) . '.' . substr($greater_qtimes{$connop},-6);
-        # if we find some associated operation(s) display them
-        if($ops{"$connop"})
-        {
-            printf "  %-12s    %s\n", $qt, $ops{"$connop"};
-        }
-        # else, just display conn + op
-        else
-        {
-            printf "  %-12s    %s\n", $qt, "operation not found (conn,op) = (" . $connop . ")" ;
+    unless($sunds)
+    {
+        print "\n\n"
+        . "# qtime (s)       Operation\n"
+        . "------------      --------------------------------------------------------------\n";
+        # sort qtimes by their value (descending) and only select the n first ones
+        my %greater_qtimes = map { $_ => $qtimes{$_} } (sort { $qtimes{$b} <=> $qtimes{$a} } keys %qtimes)[0..$max_qtimes];
+        # for each greater qtime (from the greater to the lower)
+        foreach my $connop (sort { $greater_qtimes{$b} <=> $greater_qtimes{$a} } keys %greater_qtimes ) {
+            # format time from µs (123456789) to s (123.456789)
+            my $qt = substr($greater_qtimes{$connop},0,-6) . '.' . substr($greater_qtimes{$connop},-6);
+            # if we find some associated operation(s) display them
+            if($ops{"$connop"})
+            {
+                printf "  %-12s    %s\n", $qt, $ops{"$connop"};
+            }
+            # else, just display conn + op
+            else
+            {
+                printf "  %-12s    %s\n", $qt, "operation not found (conn,op) = (" . $connop . ")" ;
+            }
         }
     }
 
