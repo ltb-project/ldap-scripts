@@ -33,11 +33,11 @@
 */
 
 #define PCRE2_CODE_UNIT_WIDTH 8
-#define LINE_MAX_SIZE 16384
-#define FILTER_MAX_SIZE 1024
-#define FILTER_COMP_MAX_SIZE 128
-#define MAX_FILTERS 256
-#define ATTR_MAX_SIZE 128
+#define LINE_MAX_SIZE 65536
+#define FILTER_MAX_SIZE 16384
+#define FILTER_COMP_MAX_SIZE 256
+#define MAX_FILTERS 2048
+#define ATTR_MAX_SIZE 256
 #define VAL_MAX_SIZE 1024
 
 
@@ -321,8 +321,15 @@ int main( int argc, char **argv )
     char current_filter[FILTER_MAX_SIZE];
 
     // structures storing the filters
-    sfilter full_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
-    sfilter comp_filter[MAX_FILTERS] = { { .filter = "", .occurrence = 0 } };
+    sfilter *full_filter = malloc(MAX_FILTERS * sizeof(sfilter));
+    sfilter *comp_filter = malloc(MAX_FILTERS * sizeof(sfilter));
+    for( int i=0 ; i < MAX_FILTERS ; i++ )
+    {
+        full_filter[i].filter[0] = '\0';
+        full_filter[i].occurrence = 0;
+        comp_filter[i].filter[0] = '\0';
+        comp_filter[i].occurrence = 0;
+    }
 
 
     if(argc < 2)
@@ -366,7 +373,7 @@ int main( int argc, char **argv )
 
             if(rc == 0) {
                 // error
-                fprintf(stderr,"offset vector too small: %d",rc);
+                fprintf(stderr,"offset vector too small: %d\n",rc);
             }
             else if(rc == 2) // 2 = regex matching (1) + one matching group (1)
             {
@@ -403,6 +410,9 @@ int main( int argc, char **argv )
     printf("| Occurrences | Filter components                                              |\n");
     printf("+-------------+----------------------------------------------------------------+\n");
     display_filters(comp_filter);
+
+    free(full_filter);
+    free(comp_filter);
 
     exit(0);
 }
