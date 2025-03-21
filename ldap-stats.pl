@@ -8,9 +8,13 @@
 # Author: LDAP Tool Box project
 # Author: David Coutadeur <david.coutadeur@gmail.com>
 #
-# Current Version: 9
+# Current Version: 10
 #
 # Revision History:
+#
+#  Version 10
+#  - add option --csv to output some stats in CSV (#38)
+#  - reorder logfiles list by the date in their first line (#42)
 #
 #  Version 9
 #  - add option --sunds to parse Sun DS logs (#36)
@@ -150,6 +154,8 @@
 
 use strict;
 use warnings;
+use List::Util qw(min max);
+use Date::Parse;
 use Getopt::Long;
 use Socket;
 use Carp;
@@ -176,7 +182,8 @@ sub usage {
       . "   -D                     Use RFC5424 date format\n"
       . "   --log24                Use OpenLDAP 2.4 log format (no qtime/etime)\n"
       . "   --log26                Use OpenLDAP 2.6 log format\n"
-      . "   --sunds                Use Sun DS log format\n";
+      . "   --sunds                Use Sun DS log format\n"
+      . "   --csv <file>           export operations stats to a csv file (overwriting it)\n";
     return;
 }
 
@@ -214,6 +221,9 @@ my $log26 = 0;
 # Use SunDS log format
 my $sunds = 0;
 
+# output operations stats to a csv file
+my $csv = "";
+
 # Maximum number of greater qtimes to display
 my $max_qtimes = 10;
 
@@ -238,6 +248,7 @@ GetOptions(
     'log24'          => \$log24,
     'log26'          => \$log26,
     'sunds'          => \$sunds,
+    'csv=s'          => \$csv,
 );
 
 ### print a nice usage message
@@ -288,6 +299,7 @@ my %operations;          # Hash to store operations information
 my %qtimes;              # Hash to store qtimes { conn,op => qtime,... }
 my %etimes;              # Hash to store etimes { conn,op => etime,... }
 my %ops;                 # Hash to store operations { conn,op => operation,... }
+my $machine = "";        # Scalar to store the machine name
 
 $operations{CONNECT} = {
     DATA    => 0,
@@ -446,12 +458,12 @@ sub storeOp {
     }
 }
 
-###################################################
-### Open the logfile and process all of the entries
-###################################################
+#####################################################################
+### First pass: reorder logfiles list by the date of their first line
+#####################################################################
+
 for my $file (@ARGV) {
     $logfile = $file;
-    my $lines = 0;
 
     ### find open filter to use
     my $openfilter = '<' . $logfile . q{};
@@ -475,9 +487,59 @@ for my $file (@ARGV) {
 
     ### setup the arrray to hold the start/stop times
     $logarray{$logfile} = {
-        SDATE => q{},
-        EDATE => q{},
+        SDATE      => q{},
+        EDATE      => q{},
+        STIMESTAMP => q{},
     };
+
+    my $line = <LOGFILE>;
+    my $fulldate = getFullDate($line);
+
+    # Get machine name in logfile if possible
+    if( $line =~ / ([^ ]+) [^ ]+: conn=[0-9]+ op=[0-9]+ / )
+    {
+        $machine = $1;
+    }
+
+    ### Get start date converted as unix timestamp
+    if ( $line =~ /^$dateregexp_full/mx ) {
+        $logarray{$logfile}{STIMESTAMP} = str2time($fulldate);
+    }
+
+    close LOGFILE;
+}
+
+# sort logfiles list by the date of their first line
+my @orderedLogFiles = sort {
+                              $logarray{$a}{STIMESTAMP} <=> $logarray{$b}{STIMESTAMP}
+                           } keys(%logarray);
+
+###################################################
+### Open the logfile and process all of the entries
+###################################################
+for my $file (@orderedLogFiles) {
+    $logfile = $file;
+    my $lines = 0;
+
+    ### find open filter to use
+    my $openfilter = '<' . $logfile . q{};
+
+    ### decode gzipped / bzip2-compressed files
+    if ( $logfile =~ /\.bz2$/mx ) {
+        $openfilter = q{bzip2 -dc "} . $logfile . q{"|}
+          or carp "Problem decompressing!: $!\n";
+    }
+
+    if ( $logfile =~ /\.(gz|Z)$/mx ) {
+        $openfilter = q{gzip -dc "} . $logfile . q{"|}
+          or carp "Problem decompressing!: $!\n";
+    }
+
+    ### If the logfile isn't valid, move on to the next one
+    if ( !open LOGFILE, $openfilter ) {
+        print "ERROR: unable to open '$logfile': $!\n";
+        next;
+    }
 
     ### Only print banner if requested
     if ( $increment > 0 ) {
@@ -938,15 +1000,22 @@ for my $file (@ARGV) {
     close LOGFILE;
 }
 
+# Get min and max dates in all log files
+# %sdates = { unix_timestamp => date_string_in_log }
+my %sdates = map { str2time($_->{SDATE}) => $_->{SDATE} } values %logarray;
+my %edates = map { str2time($_->{EDATE}) => $_->{EDATE} } values %logarray;
+my $sdate = $sdates{min(keys %sdates)};
+my $edate = $edates{max(keys %edates)};
+
 ###################################################################
 ### Print a nice header with the logfiles and date ranges processed
 ###################################################################
 ## Please see file perltidy.ERR
 print "\n\n"
-  . "Report Generated on $date\n"
-  . q{-} x ( 20 + length $date ) . "\n";
+  . "Report Generated for $machine from " . $sdate . " to " . $edate . "\n"
+  . q{-} x ( 31 + length($sdate) + length($edate) + length($machine) ) . "\n";
 
-for my $logfile ( sort keys %logarray ) {
+for my $logfile ( @orderedLogFiles ) {
     if ( !-z $logfile ) {
         printf "Processed \"$logfile\":  %s - %s\n", $logarray{$logfile}{SDATE},
           $logarray{$logfile}{EDATE};
@@ -984,6 +1053,36 @@ printf "Total deletions               : %d\n", $stats{TOTAL_DEL};
 printf "Unindexed attribute requests  : %d\n", $stats{TOTAL_UNINDEXED};
 printf "Operations per connection     : %.2f\n",
   $stats{TOTAL_CONNECT} ? $total_operations / $stats{TOTAL_CONNECT} : 0;
+
+if($csv)
+{
+    my $CSV; # csv file handler
+    open($CSV, '>', $csv) or
+        printf STDERR "Error while trying to open file for writting: ".$!;
+
+    # Print title
+    print $CSV "Operations on directory $machine from " . $sdate . " to " . $edate ."\n";
+
+    # Print header
+    print $CSV "operations;connections;authentication failures;binds;unbinds;";
+    print $CSV "searches;compares;modifications;modrdns;additions;deletions\n";
+
+    # Print operations stats
+    print $CSV $total_operations.";";
+    print $CSV $stats{TOTAL_CONNECT}.";";
+    print $CSV $stats{TOTAL_AUTHFAILURES}.";";
+    print $CSV $stats{TOTAL_BIND}.";";
+    print $CSV $stats{TOTAL_UNBIND}.";";
+    print $CSV $stats{TOTAL_SRCH}.";";
+    print $CSV $stats{TOTAL_CMP}.";";
+    print $CSV $stats{TOTAL_MOD}.";";
+    print $CSV $stats{TOTAL_MODRDN}.";";
+    print $CSV $stats{TOTAL_ADD}.";";
+    print $CSV $stats{TOTAL_DEL}."\n";
+
+    close($CSV);
+
+}
 
 ###################################################
 ### Process the host information and print a report
