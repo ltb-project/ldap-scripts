@@ -1,7 +1,7 @@
 #! /usr/pkg/bin/perl
 
 #====================================================================
-# Script to convert CSV or LDIF into LDIF
+# Script to print DIT from LDIF file
 #
 # Copyright (C) Marc Baudoin
 # Copyright (C) LTB-project.org
@@ -24,19 +24,41 @@ use strict;
 use warnings;
 
 use Tree::Simple;
+use Net::LDAP::Util qw/ldap_explode_dn/;
 
 my $directory = undef;
 my $apex      = undef;
 
 while (<>) {
     if ( my ($dn) = /^dn: (.+)$/ ) {
+
+        # Normalize DN
+        my $dn_explode = ldap_explode_dn( $dn, 'casefold' => 'lower' );
+        next unless $dn_explode;
+        my @dn_full = @$dn_explode;
+        my ( $rdn, $branch );
+
+        for my $i ( 0 .. $#dn_full ) {
+            $branch = $branch ? $branch .= ", " : "";
+            foreach my $attr ( keys %{ $dn_full[$i] } ) {
+                if ( $i == 0 ) {
+                    $rdn = $rdn ? $rdn .= "+" : "";
+                    $rdn .= $attr . "=" . lc( %{ $dn_full[$i] }{$attr} );
+                }
+                else {
+                    $branch .= $attr . "=" . lc( %{ $dn_full[$i] }{$attr} );
+                }
+            }
+        }
+
+        $dn = $rdn . ', ' . $branch;
+
         if ( not defined($directory) ) {
             $directory->{$dn} = Tree::Simple->new($dn);
             $apex = $dn;
         }
         else {
-            my ( $first, $next ) = $dn =~ /^([^,]+),(.+)$/;
-            $directory->{$dn} = Tree::Simple->new( $dn, $directory->{$next} );
+            $directory->{$dn} = Tree::Simple->new( $dn, $directory->{$branch} );
         }
     }
 }
@@ -61,7 +83,7 @@ $directory->{$apex}->traverse(
                 }
             }
         }
-        print '+-- ' . $tag . "($depth)" . "\n";
+        print '+-- ' . $tag . " ($depth)" . "\n";
 
         if ( not $element->isLeaf() ) {
             $aff_vert[$depth] = 1 if $element->isFirstChild();
