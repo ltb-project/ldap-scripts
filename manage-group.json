@@ -1,0 +1,21 @@
+{
+  "host": "ldap://localhost",
+  "bindDN": "cn=Manager,dc=my-domain,dc=com",
+  "bindPW": "secret",
+  "users": {
+    "base": "ou=people,dc=my-domain,dc=com",
+    "filter": "(mail=*domain.com)",
+    "attrs": [
+      "uid",
+      "mail"
+    ]
+  },
+  "group": {
+    "base": "ou=groups,dc=my-domain,dc=com",
+    "filter": "(cn=comptes_bloques)",
+    "attrs": [
+      "cn",
+      "member"
+    ]
+  }
+}
